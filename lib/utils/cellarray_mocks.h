@@ -1,0 +1,51 @@
+// # -*- mode: c -*-
+/* File: cellarray_mocks.h.src */
+/*
+  This file is a part of the Corrfunc package
+  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
+  License: MIT LICENSE. See LICENSE file under the top-level
+  directory at https://github.com/manodeep/Corrfunc/
+*/
+
+#pragma once
+
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "weight_defs.h"
+
+typedef struct cellarray_mocks cellarray_mocks;
+struct cellarray_mocks{
+    int64_t nelements;
+    DOUBLE *x;
+    DOUBLE *y;
+    DOUBLE *z;
+    weight_struct weights;
+    DOUBLE xbounds[2];
+    DOUBLE ybounds[2];
+    DOUBLE zbounds[2];
+
+    //these two fields are only relevant for angular calculations
+    DOUBLE dec_bounds[2];
+    DOUBLE ra_bounds[2];
+
+    int64_t *original_index;//the input order for particles
+    uint8_t owns_memory;// boolean flag if the x/y/z pointers were separately malloc'ed -> need to be freed once calculations are done
+
+    /*
+      boolean flag (only relevant when external particle positions
+      are used) to re-order particles back into original order
+      after calculations are done. Only relevant if external
+      pointers are being used for x/y/z
+    */
+
+    uint8_t unused[7];//to maintain alignment explicitly (the compiler would insert this anyway)
+};
+
+
+#ifdef __cplusplus
+}
+#endif

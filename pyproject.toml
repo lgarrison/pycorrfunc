@@ -1,0 +1,15 @@
+[build-system]
+build-backend = 'mesonpy'
+requires = ['meson-python']
+
+[project]
+name = 'pycorrfunc'
+version = '0.0.1'
+description = 'A pythonic rewrite of the software infrastructure surrounding Corrfunc'
+authors = [
+  {name = 'Lehman Garrison', email = 'lgarrison@flatironinstitute.org'},
+  {name = 'Peter McMaster', email = 'pjm2188@columbia.edu'},
+]
+
+[tool.meson-python.args]
+compile = ["-v"]
