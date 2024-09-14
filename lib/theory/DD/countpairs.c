@@ -15,7 +15,6 @@
 #include "defs.h"
 #include "utils.h" //all of the utilities
 #include "progressbar.h" //for the progressbar
-#include "cpu_features.h" //prototype get_max_usable_isa required for runtime dispatch
 
 #include "gridlink_impl.h"//function proto-type for gridlink
 #include "gridlink_utils.h" //for associated helper routines
@@ -33,12 +32,8 @@ void interrupt_handler_countpairs(int signo)
 }
 
 countpairs_func_ptr countpairs_driver(const struct config_options *options) {
-    static countpairs_func_ptr function = NULL;
-    static isa old_isa = (isa)-1;
-
-    if (old_isa == options->instruction_set) {
-        return function;
-    }
+    // TODO: use options.instruction_set
+    countpairs_func_ptr function = NULL;
 
     function = NULL; // Reset function pointer to null
 
@@ -50,14 +45,14 @@ countpairs_func_ptr countpairs_driver(const struct config_options *options) {
   //  #endif
 
     // Check for AVX support
-    #if defined (__AVX__)
+    #if defined (HAVE_AVX)
     if (function == NULL && avx_available()) {
         function = countpairs_avx_intrinsics;
     }
     #endif
 
     // Check for SSE support
-    #if defined (__SSE4_2__)
+    #if defined (HAVE_SSE42)
     if (function == NULL && sse_available()) {
         function = countpairs_sse_intrinsics;
     }
@@ -67,8 +62,6 @@ countpairs_func_ptr countpairs_driver(const struct config_options *options) {
     if (function == NULL) {
         function = countpairs_fallback;
     }
-
-    old_isa = options->instruction_set;
 
     if (options->verbose) {
         if (function == countpairs_fallback) {
@@ -97,31 +90,12 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
                DOUBLE *weighted_pairs)
 
 {
-
-
-    //unneccesary? 
-    
-    /*
-    if(options->float_type != sizeof(DOUBLE)) {
-        fprintf(stderr,"ERROR: In %s> Can only handle arrays of size=%zu. Got an array of size = %zu\n",
-                __FUNCTION__, sizeof(DOUBLE), options->float_type);
-        return EXIT_FAILURE;
-    }
-    */
-    
-
     int need_weighted_pairs = options->weight_method != NONE;
 
     struct timeval t0;
     if(options->c_api_timer) {
         gettimeofday(&t0, NULL);
     }
-
-#if defined(_OPENMP)
-    omp_set_num_threads(options->numthreads);
-#else
-    (void) options->numthreads;
-#endif
 
     if(options->max_cells_per_dim == 0) {
         fprintf(stderr,"Warning: Max. cells per dimension is set to 0 - resetting to `NLATMAX' = %d\n", NLATMAX);
@@ -395,7 +369,7 @@ for (int i = 0; i < N_bin_edges - 1; i++) {
     }
     /*---Loop-over-Data1-particles--------------------*/
 #if defined(_OPENMP)
-#pragma omp parallel shared(numdone, abort_status, interrupt_status)
+#pragma omp parallel shared(numdone, abort_status, interrupt_status) num_threads(options->numthreads)
     {
         int tid = omp_get_thread_num();
         uint64_t npairs[N_bin_edges];

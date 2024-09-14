@@ -12,11 +12,8 @@
 #include <stdlib.h>
 #include <immintrin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "function_precision.h" 
+#include "function_precision.h"
+#include "defs.h"
 
 #define PREFETCH(mem)        asm ("prefetcht0 %0"::"m"(mem))
 
@@ -33,9 +30,8 @@ extern "C" {
 #define AVX_SET_INT(X)                      _mm256_set1_epi32(X)
 
 
-#ifndef CORRFUNC_DOUBLE
+#ifndef CORRFUNC_USE_DOUBLE
 
-#define DOUBLE                           float  
 #define AVX_NVEC                         8    
 #define AVX_INTS                         __m256i
 #define AVX_FLOATS                       __m256
@@ -99,8 +95,7 @@ extern "C" {
 #define AVX_STREAMING_STORE_INTS(X,Y)     _mm256_stream_si256(X,Y)
 
 #else //DOUBLE PRECISION CALCULATIONS
-  
-#define DOUBLE                           double
+
 #define AVX_NVEC                         4    
 #define AVX_INTS                         __m128i
 #define AVX_FLOATS                       __m256d
@@ -159,7 +154,7 @@ extern "C" {
 #define AVX_STREAMING_STORE_FLOATS(X,Y)   _mm256_stream_pd(X,Y)
 #define AVX_STREAMING_STORE_INTS(X,Y)     _mm_stream_si128(X,Y)
 
-#endif //CORRFUNC_DOUBLE
+#endif //CORRFUNC_USE_DOUBLE
 
 #ifndef  __INTEL_COMPILER
 #include "fast_acos.h"
@@ -216,7 +211,7 @@ static inline AVX_FLOATS inv_cosine_avx(const AVX_FLOATS X, const int order)
     DOUBLE weights[AVX_NVEC];
   };
 
-#ifdef CORRFUNC_DOUBLE    
+#ifdef CORRFUNC_USE_DOUBLE    
 #define CHECK_AND_FAST_DIVIDE_AVX(result, numerator, denominator, fast_divide_and_NR_steps)                      { \
         /* For double precision floats */                               \
         if (fast_divide_and_NR_steps == 0) {                            \
@@ -269,9 +264,4 @@ static inline AVX_FLOATS inv_cosine_avx(const AVX_FLOATS X, const int order)
             result = AVX_MULTIPLY_FLOATS(numerator, rc_iter);           \
         } /* end of FAST_DIVIDE */                                      \
     }
-#endif /* end of CORRFUNC_DOUBLE for defining check_and_fast_divide macro */
-
-
-#ifdef __cplusplus
-}
-#endif
+#endif /* end of CORRFUNC_USE_DOUBLE for defining check_and_fast_divide macro */

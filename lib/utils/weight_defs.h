@@ -2,12 +2,10 @@
 #pragma once
 
 #include <stdint.h>
+
+#include "defs.h"
+
 #define MAX_NUM_WEIGHTS 10
-#ifdef CORRFUNC_DOUBLE
-    #define DOUBLE double
-#else
-    #define DOUBLE float
-#endif
 
 typedef struct
 {

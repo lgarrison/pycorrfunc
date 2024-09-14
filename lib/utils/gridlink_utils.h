@@ -11,11 +11,6 @@
 
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #include "defs.h" //for definition of config_options
 #include "weight_defs.h" //for definition of weight_struct
 
@@ -70,11 +65,3 @@ extern "C" {
         }                                                               \
         if(duplicate_flag == 1) continue;                               \
     }
-
-
-
-
-
-#ifdef __cplusplus
-}
-#endif

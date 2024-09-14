@@ -11,10 +11,6 @@
 
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "weight_defs.h"
 
 typedef struct cellarray cellarray;
@@ -37,11 +33,4 @@ struct cellarray{
       after calculations are done. Only relevant if external
       pointers are being used for x/y/z
     */
-
-    uint8_t unused[7];//to maintain alignment explicitly (the compiler would insert this anyway)
 };
-
-
-#ifdef __cplusplus
-}
-#endif

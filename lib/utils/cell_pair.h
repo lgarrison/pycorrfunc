@@ -11,10 +11,6 @@
 
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "weight_defs.h"
 
 struct cell_pair{
@@ -35,7 +31,3 @@ struct cell_pair{
 
     int8_t same_cell;
 };
-
-#ifdef __cplusplus
-}
-#endif

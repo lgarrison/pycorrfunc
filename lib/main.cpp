@@ -1,11 +1,15 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 extern "C" {
     #include "theory/DD/countpairs.h"
 }
 
-#ifdef CORRFUNC_DOUBLE
+#ifdef CORRFUNC_USE_DOUBLE
 #define PYBIND_NAME _corrfunc
 #else 
 #define PYBIND_NAME _corrfuncf
@@ -42,25 +46,29 @@ void countpairs_wrapper(py::array_t<DOUBLE> X1, py::array_t<DOUBLE> Y1, py::arra
     DOUBLE* ravg_ptr = static_cast<DOUBLE*>(ravg_buf.ptr);
     DOUBLE* weighted_pairs_ptr = static_cast<DOUBLE*>(weighted_pairs_buf.ptr);
 
+    if (numthreads < 1) {
+#ifdef _OPENMP
+        numthreads = omp_get_max_threads();
+#else
+        numthreads = 1;
+#endif
+    }
+
     struct config_options options = get_config_options(NONE);
     options.numthreads = numthreads;
     options.boxsize_x = boxsize;
     options.boxsize_y = boxsize;
     options.boxsize_z = boxsize;
-    options.periodic = 1;
+    options.periodic = boxsize > (DOUBLE) 0.;
     options.autocorr = 0;
     options.verbose = 1;
-
 
     int64_t ND1 = X1_buf.shape[0];
     int64_t ND2 = X2_buf.shape[0];
     int64_t N_bin_edges = bin_edges_buf.shape[0];
 
-    
     countpairs(ND1, X1_ptr, Y1_ptr, Z1_ptr, ND2, X2_ptr, Y2_ptr, Z2_ptr, N_bin_edges, bin_edges_ptr, 
         &options, npairs_ptr,ravg_ptr, weighted_pairs_ptr);
-    
-    
 }
 
 PYBIND11_MODULE(PYBIND_NAME, m) {

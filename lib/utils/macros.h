@@ -107,7 +107,7 @@ the ROOT DIRECTORY of ``Corrfunc`` and re-install the entire packge.\n"
      do { if (!(EXP)) {                                                 \
              fprintf(stderr,"Error in file: %s\tfunc: %s\tline: %d with expression `"#EXP"'\n", __FILE__, __FUNCTION__, __LINE__); \
              fprintf(stderr,__VA_ARGS__);                               \
-             fprintf(stderr,ANSI_COLOR_BLUE "Hopefully, input validation. Otherwise, bug in code: please file an issue on GitHub: https://github.com/manodeep/Corrfunc/issues"ANSI_COLOR_RESET"\n"); \
+             fprintf(stderr,ANSI_COLOR_BLUE "Hopefully, input validation. Otherwise, bug in code: please file an issue on GitHub: https://github.com/manodeep/Corrfunc/issues" ANSI_COLOR_RESET "\n"); \
              return EXIT_FAILURE;                                       \
          }                                                              \
      } while (0)
@@ -120,7 +120,7 @@ the ROOT DIRECTORY of ``Corrfunc`` and re-install the entire packge.\n"
      do { if (!(EXP)) {                                                 \
              fprintf(stderr,"Error in file: %s\tfunc: %s\tline: %d with expression `"#EXP"'\n", __FILE__, __FUNCTION__, __LINE__); \
              fprintf(stderr,__VA_ARGS__);                               \
-             fprintf(stderr,ANSI_COLOR_BLUE "Hopefully, input validation. Otherwise, bug in code: please file an issue on GitHub: https://github.com/manodeep/Corrfunc/issues"ANSI_COLOR_RESET"\n"); \
+             fprintf(stderr,ANSI_COLOR_BLUE "Hopefully, input validation. Otherwise, bug in code: please file an issue on GitHub: https://github.com/manodeep/Corrfunc/issues" ANSI_COLOR_RESET "\n"); \
          }                                                              \
      } while (0)
 #endif
@@ -133,7 +133,7 @@ the ROOT DIRECTORY of ``Corrfunc`` and re-install the entire packge.\n"
      do { if (!(EXP)) {                                                 \
              fprintf(stderr,"Error in file: %s\tfunc: %s\tline: %d with expression `"#EXP"'\n", __FILE__, __FUNCTION__, __LINE__); \
              fprintf(stderr,__VA_ARGS__);                               \
-             fprintf(stderr,ANSI_COLOR_BLUE "Hopefully, input validation. Otherwise, bug in code: please file an issue on GitHub: https://github.com/manodeep/Corrfunc/issues"ANSI_COLOR_RESET"\n"); \
+             fprintf(stderr,ANSI_COLOR_BLUE "Hopefully, input validation. Otherwise, bug in code: please file an issue on GitHub: https://github.com/manodeep/Corrfunc/issues" ANSI_COLOR_RESET "\n"); \
              return VAL;                                                \
          }                                                              \
      } while (0)

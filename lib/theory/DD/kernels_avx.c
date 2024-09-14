@@ -10,7 +10,7 @@
 #include "kernelfuncs.h"
 
 
-#if defined(__AVX__)
+#if defined(HAVE_AVX)
 #include "avx_calls.h"
 
 #ifdef _MSC_VER
@@ -344,4 +344,4 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
     return EXIT_SUCCESS;
 }
 
-#endif //__AVX__
+#endif //HAVE_AVX

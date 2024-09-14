@@ -8,7 +8,7 @@
 #if defined(__AVX512F__)
 #include "avx512_calls.h"
 
-#ifdef CORRFUNC_DOUBLE
+#ifdef CORRFUNC_USE_DOUBLE
         const int64_t bits_set_in_avx512_mask[] = { B8(0) };
         const uint8_t masks_per_misalignment_value[] = {0b11111111, 
                                                         0b00000001,

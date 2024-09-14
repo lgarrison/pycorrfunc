@@ -255,7 +255,7 @@ cellarray_mocks * gridlink_mocks(const int64_t NPART,
                 nallocated[icell] = expected_n;
             }
             XRETURN(lattice[icell].nelements < nallocated[icell], NULL,
-                    ANSI_COLOR_RED"BUG: lattice[%"PRId64"].nelements = %"PRId64" must be less than allocated memory = %"PRId64 ANSI_COLOR_RESET"\n",
+                    ANSI_COLOR_RED"BUG: lattice[%"PRId64"].nelements = %"PRId64" must be less than allocated memory = %"PRId64  ANSI_COLOR_RESET "\n",
                     icell, lattice[icell].nelements, nallocated[icell]);
 
             const int64_t ipos = lattice[icell].nelements;
@@ -363,7 +363,7 @@ cellarray_mocks * gridlink_mocks(const int64_t NPART,
     /* Do we need to sort the particles in Z ? */
     if(options->sort_on_z) {
 #if defined(_OPENMP)
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic) num_threads(options->numthreads)
 #endif
         for(int64_t icell=0;icell<totncells;icell++) {
             const cellarray_mocks *first=&(lattice[icell]);
@@ -455,7 +455,7 @@ struct cell_pair * generate_cell_pairs_mocks(struct cellarray_mocks *lattice1,
         const int ix = icell / (nmesh_y * nmesh_z );
         const int iy = (icell - iz - ix*nmesh_z*nmesh_y)/nmesh_z;
         XRETURN(icell == (ix * nmesh_y * nmesh_z + iy * nmesh_z + (int64_t) iz), NULL,
-                ANSI_COLOR_RED"BUG: Index reconstruction is wrong. icell = %"PRId64" reconstructed index = %"PRId64 ANSI_COLOR_RESET"\n",
+                ANSI_COLOR_RED"BUG: Index reconstruction is wrong. icell = %"PRId64" reconstructed index = %"PRId64  ANSI_COLOR_RESET "\n",
                 icell, (ix * nmesh_y * nmesh_z + iy * nmesh_z + (int64_t) iz));
 
         for(int iix=-xbin_refine_factor;iix<=xbin_refine_factor;iix++){
@@ -738,7 +738,7 @@ cellarray_mocks * gridlink_mocks_theta_dec(const int64_t NPART,
             }
 
             XRETURN(lattice[icell].nelements < nallocated[icell],NULL,
-                    ANSI_COLOR_RED"BUG: lattice[%d].nelements = %"PRId64" must be less than allocated memory = %"PRId64 ANSI_COLOR_RESET"\n",
+                    ANSI_COLOR_RED"BUG: lattice[%d].nelements = %"PRId64" must be less than allocated memory = %"PRId64  ANSI_COLOR_RESET "\n",
                     idec, lattice[icell].nelements, nallocated[icell]);
 
             const int64_t ipos=lattice[icell].nelements;
@@ -1320,7 +1320,7 @@ cellarray_mocks * gridlink_mocks_theta_ra_dec(const int64_t NPART,
                 nallocated[icell] = expected_n;
             }
             XRETURN(lattice[icell].nelements < nallocated[icell],NULL,
-                    ANSI_COLOR_RED"BUG: lattice[%"PRId64"].nelements = %"PRId64" must be less than allocated memory = %"PRId64 ANSI_COLOR_RESET"\n",
+                    ANSI_COLOR_RED"BUG: lattice[%"PRId64"].nelements = %"PRId64" must be less than allocated memory = %"PRId64  ANSI_COLOR_RESET "\n",
                     icell, lattice[icell].nelements, nallocated[icell]);
 
             const int64_t ipos=lattice[icell].nelements;
@@ -1514,6 +1514,7 @@ struct cell_pair * generate_cell_pairs_mocks_theta_ra_dec(cellarray_mocks *latti
 
     const DOUBLE ra_diff = ra_max - ra_min;
     const DOUBLE inv_ra_diff = 1.0/ra_diff;
+    (void) max_ngrid_ra;
     XRETURN( totncells <= max_ngrid_ra*ngrid_dec, NULL,
              "Total number of cells = %"PRId64" can be at most the product of max RA cells = %d and the number of DEC cells = %d\n",
              totncells, max_ngrid_ra, ngrid_dec);

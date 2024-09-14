@@ -12,10 +12,6 @@
 #include <stdlib.h>
 #include <nmmintrin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "function_precision.h"
 
 #if defined(__GNUC__) || defined(__GNUG__)
@@ -25,7 +21,7 @@ extern "C" {
 #endif
 
 
-#ifndef CORRFUNC_DOUBLE
+#ifndef CORRFUNC_USE_DOUBLE
 
 #define SSE_NVEC                         4
 #define SSE_INTS                         __m128i
@@ -168,8 +164,3 @@ extern "C" {
     SSE_FLOATS m_weights;
     DOUBLE weights[SSE_NVEC];
   };
-
-#ifdef __cplusplus
-}
-#endif
-    

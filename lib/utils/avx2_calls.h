@@ -12,11 +12,8 @@
 #include <stdlib.h>
 #include <immintrin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "function_precision.h" 
+#include "function_precision.h"
+#include "defs.h"
 
 #define PREFETCH(mem)        asm ("prefetcht0 %0"::"m"(mem))
 
@@ -31,9 +28,8 @@ extern "C" {
 #define AVX2_BIT_COUNT_UNSIGNED_INT(X)       _mm_popcnt_u32(X)
 #define AVX2_BIT_COUNT_UNSIGNED_LONG(X)      _mm_popcnt_u64(X)
 
-#ifndef CORRFUNC_DOUBLE
+#ifndef CORRFUNC_USE_DOUBLE
 
-#define DOUBLE                           float  
 #define AVX2_NVEC                         8    
 #define AVX2_INTS                         __m256i
 #define AVX2_FLOATS                       __m256
@@ -107,8 +103,7 @@ extern "C" {
 #define AVX2_STREAMING_STORE_INTS(X,Y)     _mm256_stream_si256(X,Y)
 
 #else //DOUBLE PRECISION CALCULATIONS
-  
-#define DOUBLE                           double
+
 #define AVX2_NVEC                         4    
 #define AVX2_INTS                         __m128i
 #define AVX2_FLOATS                       __m256d
@@ -179,11 +174,7 @@ extern "C" {
 #define AVX2_STREAMING_STORE_FLOATS(X,Y)   _mm256_stream_pd(X,Y)
 #define AVX2_STREAMING_STORE_INTS(X,Y)     _mm_stream_si128(X,Y)
 
-#endif //CORRFUNC_DOUBLE
+#endif //CORRFUNC_USE_DOUBLE
 
   //include all the avx matters including the declarations of union_int8 etc
 #include "avx_calls.h"
-
-#ifdef __cplusplus
-}
-#endif

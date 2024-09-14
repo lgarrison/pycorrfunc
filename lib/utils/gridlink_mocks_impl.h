@@ -11,10 +11,6 @@
 
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "defs.h"
 #include "cellarray_mocks.h"
 #include "cell_pair.h"
@@ -101,8 +97,3 @@ extern "C" {
                                                                                    const int *nmesh_grid_ra,
                                                                                    const int enable_min_sep_opt,
                                                                                    const int autocorr) __attribute__((warn_unused_result));
-
-
-#ifdef __cplusplus
-}
-#endif

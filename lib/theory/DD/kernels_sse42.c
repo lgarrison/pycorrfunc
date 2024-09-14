@@ -10,7 +10,7 @@
 #include "kernelfuncs.h"
 
 
-#if defined (__SSE4_2__)
+#if defined (HAVE_SSE42)
 #include "sse_calls.h"
 
 #ifdef _MSC_VER
@@ -28,7 +28,7 @@ int sse_available(void) {
 int sse_available(void) { return 1; }
 #else
 int sse_available(void) {
-    return __builtin_cpu_supports("sse");
+    return __builtin_cpu_supports("sse4.2");
 }
 #endif
 #endif
@@ -308,4 +308,4 @@ int countpairs_sse_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
 
   return EXIT_SUCCESS;
 }
-#endif //__SSE4_2__
+#endif //HAVE_SSE42

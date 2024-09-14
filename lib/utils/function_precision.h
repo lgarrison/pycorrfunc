@@ -18,7 +18,7 @@
 #define INV_PI_OVER_180   57.29577951308232087679815481410517033240547246656432154916024
 
 //Define the Macros
-#ifdef CORRFUNC_DOUBLE
+#ifdef CORRFUNC_USE_DOUBLE
 #define COSD(X)            cos(X*PI_OVER_180)
 #define SIND(X)            sin(X*PI_OVER_180)
 #else
@@ -26,7 +26,7 @@
 #define SIND(X)            sinf(X*PI_OVER_180)
 #endif
 
-#ifdef __AVX__
+#ifdef HAVE_AVX
     
 #define REGISTER_WIDTH 256  //cpu supports avx instructions
 #define NVECF  8  //8 floats per ymm register
@@ -34,7 +34,7 @@
 
 #else
 
-#ifdef __SSE4_2__
+#ifdef HAVE_SSE42
     
 #define REGISTER_WIDTH 128  //cpu supports sse instructions
 #define NVECF  4  //8 floats per xmm register
@@ -52,7 +52,7 @@
 
 #include <float.h>
     
-#ifdef CORRFUNC_DOUBLE
+#ifdef CORRFUNC_USE_DOUBLE
 #define REAL_FORMAT "lf"
 #define NVEC   NVECD
 #define ZERO   0.0

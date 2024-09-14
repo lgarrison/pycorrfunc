@@ -160,7 +160,7 @@ cellarray * gridlink(const int64_t NPART,
     // First pass over the particles: compute cell indices
     int64_t out_of_bounds = 0;
 #if defined(_OPENMP)
-    #pragma omp parallel for schedule(static) reduction(+:out_of_bounds)
+    #pragma omp parallel for schedule(static) reduction(+:out_of_bounds) num_threads(options->numthreads)
 #endif
     for (int64_t i=0;i<NPART;i++)  {
         int ix=(int)((X[i]-xmin)*xinv) ;
@@ -192,7 +192,7 @@ cellarray * gridlink(const int64_t NPART,
     int64_t *cell_occupation[nthreads];
 
 #if defined(_OPENMP)
-    #pragma omp parallel
+    #pragma omp parallel num_threads(options->numthreads)
 #endif
     {
         #if defined(_OPENMP)
@@ -212,7 +212,7 @@ cellarray * gridlink(const int64_t NPART,
     }
     
 #if defined(_OPENMP)
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(static) num_threads(options->numthreads)
 #endif
     for(int64_t c = 0; c < totncells; c++){
         for(int t = 1; t < nthreads; t++){
@@ -225,7 +225,7 @@ cellarray * gridlink(const int64_t NPART,
 
     // Initialize the lattice
 #if defined(_OPENMP)
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(static) num_threads(options->numthreads)
 #endif
     for (int64_t icell=0;icell<totncells;icell++) {
         lattice[icell].nelements = 0;
@@ -274,7 +274,7 @@ cellarray * gridlink(const int64_t NPART,
 
     // Now we come to the final writes of the particles into their cells
 #if defined(_OPENMP)
-    #pragma omp parallel
+    #pragma omp parallel num_threads(options->numthreads)
 #endif
     {
         #if defined(_OPENMP)
@@ -379,7 +379,7 @@ cellarray * gridlink(const int64_t NPART,
     /* Do we need to sort the particles in Z ? */
     if(options->sort_on_z) {
 #if defined(_OPENMP)
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic) num_threads(options->numthreads)
 #endif
         for(int64_t icell=0;icell<totncells;icell++) {
             const cellarray *first=&(lattice[icell]);
@@ -492,7 +492,7 @@ struct cell_pair * generate_cell_pairs(struct cellarray *lattice1,
         const int ix = icell / (nmesh_y * nmesh_z );
         const int iy = (icell - iz - ix*nmesh_z*nmesh_y)/nmesh_z;
         XRETURN(icell == (ix * nmesh_y * nmesh_z + iy * nmesh_z + (int64_t) iz), NULL,
-            ANSI_COLOR_RED"BUG: Index reconstruction is wrong. icell = %"PRId64" reconstructed index = %"PRId64 ANSI_COLOR_RESET"\n",
+            ANSI_COLOR_RED"BUG: Index reconstruction is wrong. icell = %"PRId64" reconstructed index = %"PRId64  ANSI_COLOR_RESET "\n",
                 icell, (ix * nmesh_y * nmesh_z + iy * nmesh_z + (int64_t) iz));
 
         int64_t num_ngb_this_cell = 0;

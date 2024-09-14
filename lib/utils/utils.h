@@ -16,10 +16,6 @@
 #include<sys/times.h>
 #include <sys/types.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 //general utilities
 extern void get_max_float(const int64_t ND1, const float *cz1, float *czmax);
 extern void get_max_double(const int64_t ND1, const double *cz1, double *czmax);
@@ -43,9 +39,3 @@ extern int matrix_realloc(void **matrix, size_t size, int64_t nrow, int64_t ncol
 extern void matrix_free(void **m,int64_t ny);
     
 extern void parallel_cumsum(const int64_t *a, const int64_t N, int64_t *cumsum);
-
-//end function declarations
-
-#ifdef __cplusplus
- }
-#endif

@@ -12,7 +12,7 @@ int countpairs_fallback(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, co
                                              DOUBLE *restrict src_rpavg, uint64_t *restrict src_npairs,
                                              DOUBLE *restrict src_weighted_pairs, const weight_method_t weight_method);
 
-#if defined (__SSE4_2__)
+#if defined (HAVE_SSE42)
 int sse_available(void);
 int countpairs_sse_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, const weight_struct *weights0,
                                                    const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, const weight_struct *weights1,
@@ -25,7 +25,7 @@ int countpairs_sse_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
                                                    DOUBLE *src_weighted_pairs, const weight_method_t weight_method);
 #endif
 
-#if defined (__AVX__)
+#if defined (HAVE_AVX)
 int avx_available(void);
 int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, const weight_struct *weights0,
                                                    const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, const weight_struct *weights1,

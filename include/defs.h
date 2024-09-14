@@ -1,21 +1,23 @@
 #ifndef DEFS_H
 #define DEFS_H
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <inttypes.h>
-#include <weight_defs.h>
+
+#include "simdconfig.h"
+
+#ifdef CORRFUNC_USE_DOUBLE
+typedef double DOUBLE;
+#else
+typedef float DOUBLE;
+#endif
 
 #include "macros.h"
-#include "cpu_features.h"
-
-#ifdef CORRFUNC_DOUBLE
-    #define DOUBLE double
-#else
-    #define DOUBLE float
-#endif
+#include "weight_defs.h"
 
 #define QUOTE(name) #name
 #define STR(macro) QUOTE(macro)
@@ -56,6 +58,22 @@ typedef enum {
   PAIR_PRODUCT=0,
   NUM_WEIGHT_TYPE
 } weight_method_t;
+
+typedef enum {
+  DEFAULT=-42,  /* present simply to make the enum a signed int*/
+  FALLBACK=0,
+  SSE=1,        
+  SSE2=2,       
+  SSE3=3,
+  SSSE3=4,
+  SSE4=5,
+  SSE42=6,
+  AVX=7,
+  AVX2=8,
+  AVX512F=9,
+  ARM64=10,
+  NUM_ISA
+} isa;
 
 struct config_options {
     /* The fields should appear here in decreasing order of
@@ -269,7 +287,7 @@ static inline struct config_options get_config_options(const weight_method_t wei
     struct config_options options;
     weight_struct *w0 = &(options.weights0);
     weight_struct *w1 = &(options.weights1);
-    w0->num_weights = get_num_weights_by_method(options.weight_method);
+    w0->num_weights = get_num_weights_by_method(weight_method);
     w1->num_weights = w0->num_weights;
     BUILD_BUG_OR_ZERO(sizeof(options.max_cells_per_dim) == sizeof(int16_t), max_cells_per_dim_must_be_16_bits);
     BUILD_BUG_OR_ZERO(sizeof(options.binning_flags) == sizeof(uint32_t), binning_flags_must_be_32_bits);
@@ -285,11 +303,8 @@ static inline struct config_options get_config_options(const weight_method_t wei
     options.boxsize_y = BOXSIZE_NOTGIVEN;
     options.boxsize_z = BOXSIZE_NOTGIVEN;
 
-#ifdef CORRFUNC_DOUBLE
-    options.float_type = sizeof(double);
-#else
-    options.float_type = sizeof(float);
-#endif
+    options.float_type = sizeof(DOUBLE);
+
 #ifndef SILENT
     options.verbose = 1;
 #endif
@@ -305,9 +320,9 @@ static inline struct config_options get_config_options(const weight_method_t wei
     options.instruction_set = AVX512F;
 #elif defined(__AVX2__)
     options.instruction_set = AVX2;
-#elif defined(__AVX__)
+#elif defined(HAVE_AVX)
     options.instruction_set = AVX;
-#elif defined(__SSE4_2__)
+#elif defined(HAVE_SSE42)
     options.instruction_set = SSE42;
 #else
     options.instruction_set = FALLBACK;

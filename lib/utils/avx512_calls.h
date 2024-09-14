@@ -15,11 +15,8 @@
 #include <stdint.h>
 #include <immintrin.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "function_precision.h" 
+#include "function_precision.h"
+#include "defs.h"
 
 #define PREFETCH(mem)        asm ("prefetcht0 %0"::"m"(mem))
 
@@ -54,9 +51,8 @@ extern "C" {
 #   define B14(n) B12(n), B12(n+1), B12(n+1), B12(n+2)
 #   define B16(n) B14(0),B14(1), B14(1),   B14(2)
 
-#ifndef CORRFUNC_DOUBLE
+#ifndef CORRFUNC_USE_DOUBLE
 
-#define DOUBLE                              float  
 #define AVX512_NVEC                         16    
 #define AVX512_MASK                         __mmask16
 #define AVX512_FLOATS                       __m512
@@ -181,7 +177,6 @@ extern "C" {
 
 #else //DOUBLE PRECISION CALCULATIONS
   
-#define DOUBLE                              double
 #define AVX512_NVEC                         8    
 #define AVX512_MASK                         __mmask8
 #define AVX512_FLOATS                       __m512d
@@ -325,7 +320,7 @@ extern "C" {
 #define AVX512_CAST_FLOAT_TO_INT(X)          _mm512_castpd_si512(X)
 #define AVX512_CAST_INT_TO_FLOAT(X)          _mm512_castsi512_pd(_mm512_castsi256_si512(X))
 
-#endif //CORRFUNC_DOUBLE
+#endif //CORRFUNC_USE_DOUBLE
 
 #ifndef  __INTEL_COMPILER
 #include "fast_acos.h"
@@ -368,7 +363,7 @@ static inline AVX512_FLOATS inv_cosine_avx512(const AVX512_FLOATS X, const int o
 
     extern const int64_t bits_set_in_avx512_mask[];
 
-    #ifdef CORRFUNC_DOUBLE
+    #ifdef CORRFUNC_USE_DOUBLE
         extern const uint8_t masks_per_misalignment_value[];
     #else
         extern const uint16_t masks_per_misalignment_value[];
@@ -409,11 +404,5 @@ static inline AVX512_FLOATS inv_cosine_avx512(const AVX512_FLOATS X, const int o
           result = AVX512_MASKZ_MULTIPLY_FLOATS(mask, numerator, rc_iter); \
       } /* end of FAST_DIVIDE */                                        \
   }
-    
-
-#ifdef __cplusplus
-}
-#endif
-
 
 #endif /* if defined(AVX512F) */
