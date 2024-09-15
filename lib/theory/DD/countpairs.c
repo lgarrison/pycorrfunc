@@ -31,51 +31,67 @@ void interrupt_handler_countpairs(int signo)
     interrupt_status = EXIT_FAILURE;
 }
 
-countpairs_func_ptr countpairs_driver(const struct config_options *options) {
-    // TODO: use options.instruction_set
+countpairs_func_ptr countpairs_driver(const config_options *options) {
+    // If options.isa == FASTEST, use the fastest that both has the HAVE_<ISA> macro defined
+    // and has the <isa>_available() function return true.
+    // If options.isa != FASTEST, use the specified ISA and raise an error if it is not available, without falling back.
+
+    int err_if_not_avail = options->instruction_set != FASTEST;
+
     countpairs_func_ptr function = NULL;
 
-    function = NULL; // Reset function pointer to null
+//     // Check for AVX512F support
+//    // #ifdef HAVE_AVX512F
+//   //  if (function == NULL) {
+//    //     function = countpairs_avx512_intrinsics;
+//   //  }
+//   //  #endif
 
-    // Check for AVX512F support
-   // #ifdef HAVE_AVX512F
-  //  if (function == NULL) {
-   //     function = countpairs_avx512_intrinsics;
-  //  }
-  //  #endif
-
-    // Check for AVX support
-    #if defined (HAVE_AVX)
-    if (function == NULL && avx_available()) {
-        function = countpairs_avx_intrinsics;
-    }
-    #endif
-
-    // Check for SSE support
-    #if defined (HAVE_SSE42)
-    if (function == NULL && sse_available()) {
-        function = countpairs_sse_intrinsics;
-    }
-    #endif
-
-    // Fallback function
-    if (function == NULL) {
-        function = countpairs_fallback;
-    }
-
-    if (options->verbose) {
-        if (function == countpairs_fallback) {
-            fprintf(stderr, "Using fallback kernel\n");
-        } else if (function == countpairs_sse_intrinsics) {
-            fprintf(stderr, "Using SSE kernel\n");
-        } else if (function == countpairs_avx_intrinsics) {
-            fprintf(stderr, "Using AVX kernel\n");
-        //} else if (function == countpairs_avx512_intrinsics) {
-          //  fprintf(stderr, "Using AVX512F kernel\n");
-        } else {
-            fprintf(stderr, "Unknown kernel!\n");
+    switch(options->instruction_set) {
+        case FASTEST:  // fallthrough
+        case AVX512F:
+            #ifdef HAVE_AVX512F
+            if (avx512_available()) {
+                function = countpairs_avx512_intrinsics;
+                if(options->verbose) fprintf(stderr, "Using AVX512F kernel\n");
+                break;
+            } else if (err_if_not_avail) {
+                fprintf(stderr, "AVX512F not available\n");
+                return NULL;
+            }
+            #endif
+            // fallthrough
+        case AVX:
+            #ifdef HAVE_AVX
+            if (avx_available()) {
+                function = countpairs_avx_intrinsics;
+                if (options->verbose) fprintf(stderr, "Using AVX kernel\n");
+                break;
+            } else if (err_if_not_avail) {
+                fprintf(stderr, "AVX not available\n");
+                return NULL;
+            }
+            #endif
+            // fallthrough
+        case SSE42:
+            #ifdef HAVE_SSE42
+            if (sse_available()) {
+                function = countpairs_sse_intrinsics;
+                if (options->verbose) fprintf(stderr, "Using SSE42 kernel\n");
+                break;
+            } else if (err_if_not_avail) {
+                fprintf(stderr, "SSE42 not available\n");
+                return NULL;
+            }
+            #endif
+            // fallthrough
+        case FALLBACK:
+            function = countpairs_fallback;
+            if (options->verbose) fprintf(stderr, "Using fallback kernel\n");
+            break;
+        default:
+            fprintf(stderr, "Unknown ISA\n");
             return NULL;
-        }
     }
 
     return function;
@@ -84,11 +100,10 @@ countpairs_func_ptr countpairs_driver(const struct config_options *options) {
 int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
                const int64_t ND2, DOUBLE *X2, DOUBLE *Y2, DOUBLE *Z2,
                const int64_t N_bin_edges, const DOUBLE *bin_edges,
-               struct config_options *options,
+               config_options *options,
                uint64_t *npairs,
                DOUBLE *rpavg,
                DOUBLE *weighted_pairs)
-
 {
     int need_weighted_pairs = options->weight_method != NONE;
 

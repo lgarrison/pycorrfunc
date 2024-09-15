@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-#include "defs.h"  //for definition of struct config_options
+#include "defs.h"  //for definition of config_options
 #include "cellarray.h" //for definition of struct cellarray_double/float
 #include "cell_pair.h" //for definition of struct cell_pair_double/float
 #include "weight_defs.h" //for definition of weight_struct
@@ -34,7 +34,7 @@ cellarray * gridlink(
     int *nlattice_x,
     int *nlattice_y,
     int *nlattice_z,
-    const struct config_options *options) __attribute__((warn_unused_result));
+    const config_options *options) __attribute__((warn_unused_result));
 
 struct cell_pair * generate_cell_pairs(
     struct cellarray *lattice1,

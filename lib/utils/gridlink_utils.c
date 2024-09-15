@@ -118,7 +118,7 @@ int reorder_particles_back_into_original_order(const int64_t np, int64_t *origin
     if(original_indices == NULL || X == NULL || Y == NULL || Z == NULL || weights == NULL) {
         fprintf(stderr,"Error: In %s> While re-ordering the particles back into their input order, the passed pointers "
                 "can not be NULL. May be this function does not need to be called ?\n"
-                "Please check the value of 'copy_positions' in the 'struct config_options'. This function "
+                "Please check the value of 'copy_positions' in the 'config_options'. This function "
                 "should only be called when 'copy_positions' is set to 0", __FUNCTION__);
         return EXIT_FAILURE;
     }
@@ -164,7 +164,7 @@ int reorder_particles_mocks_back_into_original_order(const int64_t np, int64_t *
     if(original_indices == NULL || weights == NULL) {
         fprintf(stderr,"Error: In %s> While re-ordering the particles back into their input order, the passed pointers "
                 "can not be NULL. May be this function does not need to be called ?\n"
-                "Please check the value of 'copy_positions' in the 'struct config_options'. This function "
+                "Please check the value of 'copy_positions' in the 'config_options'. This function "
                 "should only be called when 'copy_positions' is set to 0", __FUNCTION__);
         return EXIT_FAILURE;
     }

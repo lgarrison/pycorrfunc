@@ -32,7 +32,7 @@
                                                           int *nlattice_x,
                                                           int *nlattice_y,
                                                           int *nlattice_z,
-                                                          const struct config_options *options)__attribute__((warn_unused_result));
+                                                          const config_options *options)__attribute__((warn_unused_result));
 
     extern struct cell_pair * generate_cell_pairs_mocks(struct cellarray_mocks *lattice1,
                                                                       struct cellarray_mocks *lattice2,
@@ -57,7 +57,7 @@
                                                                     const int dec_refine_factor,
                                                                     const DOUBLE thetamax,
                                                                     int64_t *totncells,
-                                                                    const struct config_options *options)__attribute__((warn_unused_result));
+                                                                    const config_options *options)__attribute__((warn_unused_result));
 
     extern struct cell_pair * generate_cell_pairs_mocks_theta_dec(cellarray_mocks *lattice1,
                                                                                 cellarray_mocks *lattice2,
@@ -84,7 +84,7 @@
                                                                        int *ngrid_declination,
                                                                        int *max_nmesh_ra,//not really required - serves as additional checking mechanism
                                                                        int **ngrid_phi,//ngrid in ra, updates on caller -> hence the pointer to pointer
-                                                                       const struct config_options *options)  __attribute__((warn_unused_result));
+                                                                       const config_options *options)  __attribute__((warn_unused_result));
 
     extern struct cell_pair * generate_cell_pairs_mocks_theta_ra_dec(cellarray_mocks *lattice1,
                                                                                    cellarray_mocks *lattice2,

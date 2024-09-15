@@ -4,11 +4,6 @@
 #include "weight_defs.h"
 #include <inttypes.h>
 
-#include "countpairs.h"  /* For definition of results_countpairs */
-
-
-void interrupt_handler_countpairs(int signo);
-
 typedef int (*countpairs_func_ptr)(
     const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, const weight_struct *weights0,
     const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, const weight_struct *weights1,
@@ -26,7 +21,7 @@ int countpairs(
     const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
     const int64_t ND2, DOUBLE *X2, DOUBLE *Y2, DOUBLE *Z2,
     const int64_t N_bin_edges, const DOUBLE *bin_edges,
-    struct config_options *options,
+    config_options *options,
     uint64_t *npairs,
     DOUBLE *ravg,
     DOUBLE *weighted_pairs

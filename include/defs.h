@@ -37,30 +37,26 @@ the ``uint32_t binning_flags`` */
 
 #define MAX_NUM_WEIGHTS 10
 
-struct api_cell_timings {
+typedef struct {
     int64_t N1;/* Number of points in the first cell */
     int64_t N2;/* Number of points in the second cell */
     int64_t time_in_ns;/* Time taken in the compute kernel, measured in nano-seconds */
     int first_cellindex;
     int second_cellindex;
     int tid;/* Thread-id, 0 for serial case, wastes 4 bytes, since thread id is 4 bytes integer and not 8 bytes */
-};
-
-typedef struct api_cell_timings api_cell_timings;
+} api_cell_timings;
 
 #define MAX_FAST_DIVIDE_NR_STEPS  3
-#define OPTIONS_HEADER_SIZE     1024
 
 #define BOXSIZE_NOTGIVEN (-2.)
 
 typedef enum {
-  NONE=-42, /* default */
+  NONE=-1, /* default */
   PAIR_PRODUCT=0,
-  NUM_WEIGHT_TYPE
 } weight_method_t;
 
 typedef enum {
-  DEFAULT=-42,  /* present simply to make the enum a signed int*/
+  FASTEST=-1,
   FALLBACK=0,
   SSE=1,        
   SSE2=2,       
@@ -71,11 +67,10 @@ typedef enum {
   AVX=7,
   AVX2=8,
   AVX512F=9,
-  ARM64=10,
-  NUM_ISA
-} isa;
+  ARM64=10
+} isa_t;
 
-struct config_options {
+typedef struct {
     /* The fields should appear here in decreasing order of
        alignment requirements. Generally speaking, alignment
        is at least the sizeof the variable type. double has
@@ -112,11 +107,11 @@ struct config_options {
 
     /* Per cell timers. Keeps track of the number of particles per cell pair
        and time spent to compute the pairs. Might slow down code */
-    struct api_cell_timings *cell_timings;
+    api_cell_timings *cell_timings;
     int64_t totncells_timings;
 
     size_t float_type; /* floating point type -> vectorized supports double/float; fallback can support long double */
-    int32_t instruction_set; /* select instruction set to run on */
+    isa_t instruction_set; /* select instruction set to run on */
 
     char version[32]; /* fill in the version number */
     uint8_t verbose; /* Outputs progressbar and times */
@@ -178,24 +173,24 @@ struct config_options {
     /* Additional fields */
     int numthreads; /* Number of threads */
     
-};
+} config_options;
 
-static inline void set_bin_refine_scheme(struct config_options *options, const int8_t flag) {
+static inline void set_bin_refine_scheme(config_options *options, const int8_t flag) {
     // Set the top (nbits-4) to whatever already exists in binning_flag
     // and then set the bottom 4 bits to BIN_DFL
     options->binning_flags = (options->binning_flags & ~BINNING_REF_MASK) | (flag & BINNING_REF_MASK);
 }
 
-static inline void reset_bin_refine_scheme(struct config_options *options) {
+static inline void reset_bin_refine_scheme(config_options *options) {
     set_bin_refine_scheme(options, BINNING_DFL);
 }
 
-static inline int8_t get_bin_refine_scheme(struct config_options *options) {
+static inline int8_t get_bin_refine_scheme(config_options *options) {
     // Return the last 4 bits as 8 bits int
     return (int8_t)(options->binning_flags & BINNING_REF_MASK);
 }
 
-static inline void set_bin_refine_factors(struct config_options *options, const int bin_refine_factors[3]) {
+static inline void set_bin_refine_factors(config_options *options, const int bin_refine_factors[3]) {
     for(int i = 0; i < 3; i++) {
         int8_t bin_refine = bin_refine_factors[i];
         if(bin_refine_factors[i] > INT8_MAX) {
@@ -212,12 +207,12 @@ static inline void set_bin_refine_factors(struct config_options *options, const 
     reset_bin_refine_scheme(options);
 }
 
-static inline void set_custom_bin_refine_factors(struct config_options *options, const int bin_refine_factors[3]) {
+static inline void set_custom_bin_refine_factors(config_options *options, const int bin_refine_factors[3]) {
     set_bin_refine_factors(options, bin_refine_factors);
     set_bin_refine_scheme(options, BINNING_CUST);
 }
 
-static inline void reset_bin_refine_factors(struct config_options *options)
+static inline void reset_bin_refine_factors(config_options *options)
 {
     /* refine factors of 2,2,1 in the xyz dims
        seems to produce the fastest code */
@@ -229,7 +224,7 @@ static inline void reset_bin_refine_factors(struct config_options *options)
 
 
 
-static inline void set_max_cells(struct config_options *options, const int max)
+static inline void set_max_cells(config_options *options, const int max)
 {
     if(max <=0) {
         fprintf(stderr,"Warning: Max. cells per dimension was requested to be set to "
@@ -246,7 +241,7 @@ static inline void set_max_cells(struct config_options *options, const int max)
     options->max_cells_per_dim = max;
 }
 
-static inline void reset_max_cells(struct config_options *options)
+static inline void reset_max_cells(config_options *options)
 {
     options->max_cells_per_dim = NLATMAX;
 }
@@ -282,18 +277,25 @@ static inline int get_weight_method_by_name(const char *name, weight_method_t *m
     return EXIT_FAILURE;
 }
 
-static inline struct config_options get_config_options(const weight_method_t weight_method)
-{
-    struct config_options options;
+static inline config_options get_config_options(const char *weight_method){
+    config_options options;
+    memset(&options, 0, sizeof(options));
+
+    if(get_weight_method_by_name(weight_method, &options.weight_method) != EXIT_SUCCESS){
+        // TODO: we should be able to raise proper Python exceptions via nanobind
+        // Although arguably, most checks that could raise an exception should be done in Python
+        fprintf(stderr,"Error: Unknown weight method `%s'\n", weight_method);
+        exit(EXIT_FAILURE);
+    }
+
     weight_struct *w0 = &(options.weights0);
     weight_struct *w1 = &(options.weights1);
-    w0->num_weights = get_num_weights_by_method(weight_method);
+    w0->num_weights = get_num_weights_by_method(options.weight_method);
     w1->num_weights = w0->num_weights;
     BUILD_BUG_OR_ZERO(sizeof(options.max_cells_per_dim) == sizeof(int16_t), max_cells_per_dim_must_be_16_bits);
     BUILD_BUG_OR_ZERO(sizeof(options.binning_flags) == sizeof(uint32_t), binning_flags_must_be_32_bits);
     BUILD_BUG_OR_ZERO(sizeof(options.bin_refine_factors[0]) == sizeof(int8_t), bin_refine_factors_must_be_8_bits);
 
-    memset(&options, 0, sizeof(options));
     snprintf(options.version, sizeof(options.version)/sizeof(char)-1, "%s", API_VERSION);
 
     // If periodic, BOXSIZE_NOTGIVEN requires the user to set a boxsize.
@@ -304,17 +306,9 @@ static inline struct config_options get_config_options(const weight_method_t wei
     options.boxsize_z = BOXSIZE_NOTGIVEN;
 
     options.float_type = sizeof(DOUBLE);
-
-#ifndef SILENT
     options.verbose = 1;
-#endif
-
-#ifdef OUTPUT_RPAVG
     options.need_avg_sep = 1;
-#endif
-#ifdef PERIODIC
     options.periodic = 1;
-#endif
 
 #ifdef __AVX512F__
     options.instruction_set = AVX512F;
@@ -338,43 +332,26 @@ static inline struct config_options get_config_options(const weight_method_t wei
 #endif
 #endif
 
-    /* Options for wtheta*/
-#ifdef OUTPUT_THETAAVG
-    options.need_avg_sep = 1;
-#endif
-
-#ifdef LINK_IN_DEC
-    options.link_in_dec = 1;
-#endif
-#ifdef LINK_IN_RA
     options.link_in_ra=1;
     options.link_in_dec=1;
-#endif
 
-#ifdef ENABLE_MIN_SEP_OPT
     //Introduced in Corrfunc v2.3
-    options.enable_min_sep_opt=1;/* optimizations based on min. separation between cell-pairs. Enabled by default */
-#endif
-
-#ifdef FAST_ACOS
+    /* optimizations based on min. separation between cell-pairs. Enabled by default */
+    options.enable_min_sep_opt=1;
+    
     options.fast_acos=1;
-#endif
 
-#ifdef COMOVING_DIST
     options.is_comoving_dist=1;
-#endif
 
-#ifdef COPY_PARTICLES
     /* Config options introduced in Corrfunc v2.3*/
     options.copy_particles = 1;/* make a copy of particles (positions and weights) (by default) */
-#else
+    
     // Using the input particles -> positions will have to re-ordered
     // Setting the next option will mean that the particles will be re-ordered
     // into their input order when the calculation completes. Usually relevant when
     // there are other "properties" arrays for the same particle; and changing the
     // positions would
-    options.copy_particles = 0;
-#endif //Create a copy of particle positions (doubles the memory usage)
+    // options.copy_particles = 0;
 
     /* For the thread timings */
     options.totncells_timings = 0;
@@ -388,7 +365,7 @@ static inline struct config_options get_config_options(const weight_method_t wei
     return options;
 }
 
-static inline void print_cell_timings(struct config_options *options)
+static inline void print_cell_timings(config_options *options)
 {
     fprintf(stderr,"#########################################################################\n");
     fprintf(stderr,"#  Cell_1    Cell_2          N1          N2        Time_ns     ThreadID  \n");
@@ -405,7 +382,7 @@ static inline void print_cell_timings(struct config_options *options)
 
 }
 
-static inline void free_cell_timings(struct config_options *options)
+static inline void free_cell_timings(config_options *options)
 {
     if(options->totncells_timings > 0 && options->cell_timings != NULL) {
         free(options->cell_timings);
@@ -415,7 +392,7 @@ static inline void free_cell_timings(struct config_options *options)
     return;
 }
 
-static inline void allocate_cell_timer(struct config_options *options, const int64_t num_cell_pairs)
+static inline void allocate_cell_timer(config_options *options, const int64_t num_cell_pairs)
 {
     if(options->totncells_timings >= num_cell_pairs) return;
 
@@ -431,14 +408,14 @@ static inline void allocate_cell_timer(struct config_options *options, const int
     return;
 }
 
-static inline void assign_cell_timer(struct api_cell_timings *cell_timings, const int64_t num_cell_pairs, struct config_options *options)
+static inline void assign_cell_timer(api_cell_timings *cell_timings, const int64_t num_cell_pairs, config_options *options)
 {
     /* Does the existing thread timings pointer have enough memory allocated ?*/
     allocate_cell_timer(options, num_cell_pairs);
 
     /* This looks like a repeated "if" condition but it is not. Covers the case for the calloc failure above */
     if(options->totncells_timings >= num_cell_pairs) {
-        memmove(options->cell_timings, cell_timings, sizeof(struct api_cell_timings) * num_cell_pairs);
+        memmove(options->cell_timings, cell_timings, sizeof(api_cell_timings) * num_cell_pairs);
     }
 }
 #endif

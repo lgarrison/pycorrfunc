@@ -6,7 +6,7 @@ project(
     license: 'BSD',
     meson_version: '>= 1.1.0',
     default_options: [
-        'cpp_std=c++11',
+        'cpp_std=c++17',
         # 'b_sanitize=address,undefined',  # for debugging
         'warning_level=2',
         'werror=true',  # TODO: move to CI
@@ -14,7 +14,7 @@ project(
 )
 
 py = import('python').find_installation(pure: false)
-pybind11_dep = dependency('pybind11')
+nanobind_dep = dependency('nanobind', static: true)
 
 simd = import('unstable-simd')
 
@@ -70,7 +70,7 @@ extension_kwargs = {
   'install' : true,
   'subdir' : 'pycorrfunc',
   'include_directories' : inc,
-  'dependencies' : [pybind11_dep],
+  'dependencies' : [nanobind_dep],
 }
 
 corrfunc_double = py.extension_module(

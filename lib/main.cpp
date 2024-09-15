@@ -1,5 +1,9 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
+#include <optional>
+
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/string.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -10,41 +14,34 @@ extern "C" {
 }
 
 #ifdef CORRFUNC_USE_DOUBLE
-#define PYBIND_NAME _corrfunc
+#define NB_NAME _corrfunc
 #else 
-#define PYBIND_NAME _corrfuncf
+#define NB_NAME _corrfuncf
 #endif
 
-namespace py = pybind11;
+namespace nb = nanobind;
+using namespace nb::literals;
 
-void countpairs_wrapper(py::array_t<DOUBLE> X1, py::array_t<DOUBLE> Y1, py::array_t<DOUBLE> Z1,
-                        py::array_t<DOUBLE> X2, py::array_t<DOUBLE> Y2, py::array_t<DOUBLE> Z2,
-                        py::array_t<DOUBLE> bin_edges, py::array_t<uint64_t> npairs,
-                        py::array_t<DOUBLE> ravg, py::array_t<DOUBLE> weighted_pairs,
-                        int numthreads, DOUBLE boxsize) {
+template<typename T>
+using array_t = nb::ndarray<T, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
 
-    py::buffer_info X1_buf = X1.request();
-    py::buffer_info Y1_buf = Y1.request();
-    py::buffer_info Z1_buf = Z1.request();
-    py::buffer_info X2_buf = X2.request();
-    py::buffer_info Y2_buf = Y2.request();
-    py::buffer_info Z2_buf = Z2.request();
-    py::buffer_info bin_edges_buf = bin_edges.request();
-    py::buffer_info npairs_buf = npairs.request();
-    py::buffer_info ravg_buf = ravg.request();
-    py::buffer_info weighted_pairs_buf = weighted_pairs.request();
-
-    DOUBLE* X1_ptr = static_cast<DOUBLE*>(X1_buf.ptr);
-    DOUBLE* Y1_ptr = static_cast<DOUBLE*>(Y1_buf.ptr);
-    DOUBLE* Z1_ptr = static_cast<DOUBLE*>(Z1_buf.ptr);
-    DOUBLE* X2_ptr = static_cast<DOUBLE*>(X2_buf.ptr);
-    DOUBLE* Y2_ptr = static_cast<DOUBLE*>(Y2_buf.ptr);
-    DOUBLE* Z2_ptr = static_cast<DOUBLE*>(Z2_buf.ptr);
-    DOUBLE* bin_edges_ptr = static_cast<DOUBLE*>(bin_edges_buf.ptr);
-
-    uint64_t* npairs_ptr = static_cast<uint64_t*>(npairs_buf.ptr);
-    DOUBLE* ravg_ptr = static_cast<DOUBLE*>(ravg_buf.ptr);
-    DOUBLE* weighted_pairs_ptr = static_cast<DOUBLE*>(weighted_pairs_buf.ptr);
+void countpairs_wrapper(
+    array_t<DOUBLE> X1,
+    array_t<DOUBLE> Y1,
+    array_t<DOUBLE> Z1,
+    std::optional<array_t<DOUBLE>> X2,
+    std::optional<array_t<DOUBLE>> Y2,
+    std::optional<array_t<DOUBLE>> Z2,
+    array_t<const DOUBLE> bin_edges,
+    array_t<uint64_t> npairs,
+    array_t<DOUBLE> ravg,
+    array_t<DOUBLE> weighted_pairs,
+    int numthreads,
+    std::optional<DOUBLE> boxsize,
+    std::optional<std::string> weight_type,
+    bool verbose,
+    int isa
+    ) {
 
     if (numthreads < 1) {
 #ifdef _OPENMP
@@ -54,25 +51,60 @@ void countpairs_wrapper(py::array_t<DOUBLE> X1, py::array_t<DOUBLE> Y1, py::arra
 #endif
     }
 
-    struct config_options options = get_config_options(NONE);
+    const char *weight_str = weight_type.has_value() ? weight_type->c_str() : NULL;
+    config_options options = get_config_options(weight_str);
     options.numthreads = numthreads;
-    options.boxsize_x = boxsize;
-    options.boxsize_y = boxsize;
-    options.boxsize_z = boxsize;
-    options.periodic = boxsize > (DOUBLE) 0.;
-    options.autocorr = 0;
-    options.verbose = 1;
+    options.periodic = boxsize.has_value();
+    if(options.periodic){
+        // TODO: anisotropic boxsize
+        options.boxsize_x = boxsize.value();
+        options.boxsize_y = boxsize.value();
+        options.boxsize_z = boxsize.value();
+    }
+    options.autocorr = !X2.has_value();
+    options.verbose = verbose;
+    options.instruction_set = static_cast<isa_t>(isa);
 
-    int64_t ND1 = X1_buf.shape[0];
-    int64_t ND2 = X2_buf.shape[0];
-    int64_t N_bin_edges = bin_edges_buf.shape[0];
+    int64_t ND1 = X1.shape(0);
+    int64_t ND2 = X2.has_value() ? X2->shape(0) : 0;
+    int64_t N_bin_edges = bin_edges.shape(0);
 
-    countpairs(ND1, X1_ptr, Y1_ptr, Z1_ptr, ND2, X2_ptr, Y2_ptr, Z2_ptr, N_bin_edges, bin_edges_ptr, 
-        &options, npairs_ptr,ravg_ptr, weighted_pairs_ptr);
+    DOUBLE *X2_ptr = X2.has_value() ? X2->data() : nullptr;
+    DOUBLE *Y2_ptr = Y2.has_value() ? Y2->data() : nullptr;
+    DOUBLE *Z2_ptr = Z2.has_value() ? Z2->data() : nullptr;
+
+    countpairs(
+        ND1,
+        X1.data(), Y1.data(), Z1.data(),
+        ND2,
+        X2_ptr, Y2_ptr, Z2_ptr,
+        N_bin_edges,
+        bin_edges.data(), 
+        &options,
+        npairs.data(),
+        ravg.data(),
+        weighted_pairs.data()
+    );
 }
 
-PYBIND11_MODULE(PYBIND_NAME, m) {
-    m.def("countpairs", &countpairs_wrapper, py::arg("X1"), py::arg("Y1"), py::arg("Z1"),
-          py::arg("X2"), py::arg("Y2"), py::arg("Z2"), py::arg("bin_edges"), py::arg("npairs"),
-          py::arg("ravg"), py::arg("weighted_pairs"), py::arg("num_threads"), py::arg("boxsize"));
+NB_MODULE(NB_NAME, m) {
+    m.def(
+        "countpairs",
+        &countpairs_wrapper,
+        "X1"_a.noconvert(),
+        "Y1"_a.noconvert(),
+        "Z1"_a.noconvert(),
+        "X2"_a.noconvert().none(),
+        "Y2"_a.noconvert().none(),
+        "Z2"_a.noconvert().none(),
+        "bin_edges"_a.noconvert(),
+        "npairs"_a.noconvert(),
+        "ravg"_a.noconvert(),
+        "weighted_pairs"_a.noconvert(),
+        "numthreads"_a.noconvert(),
+        "boxsize"_a.noconvert().none(),
+        "weight_type"_a.noconvert().none(),
+        "verbose"_a.noconvert(),
+        "isa"_a.noconvert()
+        );
 }

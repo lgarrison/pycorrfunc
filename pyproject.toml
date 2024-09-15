@@ -10,6 +10,10 @@ authors = [
   {name = 'Lehman Garrison', email = 'lgarrison@flatironinstitute.org'},
   {name = 'Peter McMaster', email = 'pjm2188@columbia.edu'},
 ]
+dependencies = [
+  'numpy',
+]
+license = { file = "LICENSE" }
 
 [tool.meson-python.args]
 compile = ["-v"]

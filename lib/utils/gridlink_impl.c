@@ -79,7 +79,7 @@ cellarray * gridlink(const int64_t NPART,
                                    int *nlattice_x,
                                    int *nlattice_y,
                                    int *nlattice_z,
-                                   const struct config_options *options)
+                                   const config_options *options)
 {
 
     int nmesh_x=0,nmesh_y=0,nmesh_z=0;

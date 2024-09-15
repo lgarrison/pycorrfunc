@@ -68,7 +68,7 @@ cellarray_mocks * gridlink_mocks(const int64_t NPART,
                                                int *nlattice_x,
                                                int *nlattice_y,
                                                int *nlattice_z,
-                                               const struct config_options *options)
+                                               const config_options *options)
 {
     int nmesh_x=0,nmesh_y=0,nmesh_z=0;
     struct timeval t0;
@@ -557,7 +557,7 @@ cellarray_mocks * gridlink_mocks_theta_dec(const int64_t NPART,
                                                          const int dec_refine_factor,
                                                          const DOUBLE thetamax,
                                                          int64_t *totncells,
-                                                         const struct config_options *options)
+                                                         const config_options *options)
 {
     int64_t expected_n;
     size_t totnbytes=0;
@@ -1018,7 +1018,7 @@ cellarray_mocks * gridlink_mocks_theta_ra_dec(const int64_t NPART,
                                                             int *ngrid_declination,
                                                             int *max_nmesh_ra,//not really required - serves as additional checking mechanism
                                                             int **ngrid_phi,//ngrid in ra, updates on caller -> hence the pointer to pointer
-                                                            const struct config_options *options)
+                                                            const config_options *options)
 {
     int64_t expected_n;
     size_t totnbytes=0;
