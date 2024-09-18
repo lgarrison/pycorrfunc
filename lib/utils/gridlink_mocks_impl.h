@@ -29,13 +29,14 @@
                                                           const int xbin_refine_factor,
                                                           const int ybin_refine_factor,
                                                           const int zbin_refine_factor,
+                                                          const int sort_on_z,
                                                           int *nlattice_x,
                                                           int *nlattice_y,
                                                           int *nlattice_z,
                                                           const config_options *options)__attribute__((warn_unused_result));
 
-    extern struct cell_pair * generate_cell_pairs_mocks(struct cellarray_mocks *lattice1,
-                                                                      struct cellarray_mocks *lattice2,
+    extern struct cell_pair * generate_cell_pairs_mocks(cellarray_mocks *lattice1,
+                                                                      cellarray_mocks *lattice2,
                                                                       const int64_t totncells,
                                                                       int64_t *ncell_pairs,
                                                                       const int xbin_refine_factor, const int ybin_refine_factor, const int zbin_refine_factor,
@@ -55,6 +56,7 @@
                                                                     const DOUBLE dec_min,const DOUBLE dec_max,
                                                                     const DOUBLE max_dec_size,
                                                                     const int dec_refine_factor,
+                                                                    const int sort_on_z,
                                                                     const DOUBLE thetamax,
                                                                     int64_t *totncells,
                                                                     const config_options *options)__attribute__((warn_unused_result));
@@ -79,6 +81,7 @@
                                                                        const int max_dec_size,
                                                                        const int ra_refine_factor,
                                                                        const int dec_refine_factor,
+                                                                       const int sort_on_z,
                                                                        const DOUBLE thetamax,
                                                                        int64_t *ncells,
                                                                        int *ngrid_declination,

@@ -113,7 +113,7 @@ DOUBLE find_closest_pos(const DOUBLE first_xbounds[2], const DOUBLE second_xboun
 }
 
 
-int reorder_particles_back_into_original_order(const int64_t np, int64_t *original_indices, DOUBLE *X, DOUBLE *Y, DOUBLE *Z, weight_struct *weights)
+int restore_particle_order(const int64_t np, int64_t *original_indices, DOUBLE *X, DOUBLE *Y, DOUBLE *Z, weight_struct *weights)
 {
     if(original_indices == NULL || X == NULL || Y == NULL || Z == NULL || weights == NULL) {
         fprintf(stderr,"Error: In %s> While re-ordering the particles back into their input order, the passed pointers "

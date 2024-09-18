@@ -22,7 +22,7 @@ static double percent=0;
 static int END_INDEX_FOR_PERCENT_DONE[101];
 struct timeval tstart;
 
-void init_my_progressbar(const int64_t N,int *interrupted)
+void init_my_progressbar(const int64_t N)
 {
     if(N <= 0) {
         fprintf(stderr,"WARNING: N=%"PRId64" is not positive. Progress bar will not be printed\n",N);
@@ -54,20 +54,13 @@ void init_my_progressbar(const int64_t N,int *interrupted)
         PROGRESSBARSTRING[index+1] = '\0';
 
     }
-    *interrupted=0;
     beg_of_string_index=0;
     gettimeofday(&tstart, NULL);
 }
 
-void my_progressbar(const int64_t curr_index,int *interrupted)
+void my_progressbar(const int64_t curr_index)
 {
     if(SMALLPRINTSTEP > 0.0 )   {
-      if(*interrupted == 1) {
-        fprintf(stderr,"\n");
-        *interrupted = 0;
-        beg_of_string_index = 0;
-      }
-
       percent = (curr_index+1)/SMALLPRINTSTEP;//division is in double -> C has 0-based indexing -- the +1 accounts for that.
       int integer_percent = (int) percent;
 
@@ -81,21 +74,16 @@ void my_progressbar(const int64_t curr_index,int *interrupted)
     }
 }
 
-void finish_myprogressbar(int *interrupted)
+void finish_myprogressbar()
 {
   struct timeval t1;
   gettimeofday(&t1, NULL);
   char * time_string = get_time_string(tstart, t1);
   if(SMALLPRINTSTEP > 0.0) {
-    if(*interrupted == 0)   {
-      if(percent < 100.0) {
-        fprintf(stderr,"100%% done.");
-      } else {
-        fprintf(stderr," done.");
-      }
+    if(percent < 100.0) {
+      fprintf(stderr,"100%% done.");
     } else {
-      fprintf(stderr,"\n%s done.",PROGRESSBARSTRING);
-      *interrupted=0;
+      fprintf(stderr," done.");
     }
   } else {
     fprintf(stderr," done.");

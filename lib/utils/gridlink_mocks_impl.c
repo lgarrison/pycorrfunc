@@ -65,6 +65,7 @@ cellarray_mocks * gridlink_mocks(const int64_t NPART,
                                                const int xbin_refine_factor,
                                                const int ybin_refine_factor,
                                                const int zbin_refine_factor,
+                                               const int sort_on_z,
                                                int *nlattice_x,
                                                int *nlattice_y,
                                                int *nlattice_z,
@@ -291,7 +292,7 @@ cellarray_mocks * gridlink_mocks(const int64_t NPART,
             fprintf(stderr, "Error: In %s> The array to track the indices of input particle positions "
                     "should be the same size as the indices themselves\n", __FUNCTION__);
             fprintf(stderr,"Perhaps check that these two variables are the same type\n");
-            fprintf(stderr,"'original_index' within the 'struct cellarray', defined in 'cellarray.h.src' and \n");
+            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h.src' and \n");
             fprintf(stderr,"'original_indices' defined within function '%s' in file '%s'\n", __FUNCTION__, __FILE__);
             return NULL;
         }
@@ -361,7 +362,7 @@ cellarray_mocks * gridlink_mocks(const int64_t NPART,
 
 
     /* Do we need to sort the particles in Z ? */
-    if(options->sort_on_z) {
+    if(sort_on_z) {
 #if defined(_OPENMP)
 #pragma omp parallel for schedule(dynamic) num_threads(options->numthreads)
 #endif
@@ -418,8 +419,8 @@ cellarray_mocks * gridlink_mocks(const int64_t NPART,
 }
 
 
-struct cell_pair * generate_cell_pairs_mocks(struct cellarray_mocks *lattice1,
-                                                           struct cellarray_mocks *lattice2,
+struct cell_pair * generate_cell_pairs_mocks(cellarray_mocks *lattice1,
+                                                           cellarray_mocks *lattice2,
                                                            const int64_t totncells,
                                                            int64_t *ncell_pairs,
                                                            const int xbin_refine_factor, const int ybin_refine_factor, const int zbin_refine_factor,
@@ -449,7 +450,7 @@ struct cell_pair * generate_cell_pairs_mocks(struct cellarray_mocks *lattice1,
             "with each element of size %zu bytes\n", max_num_cell_pairs, sizeof(*all_cell_pairs));
 
     for(int64_t icell=0;icell<totncells;icell++) {
-        struct cellarray_mocks *first = &(lattice1[icell]);
+        cellarray_mocks *first = &(lattice1[icell]);
         if(first->nelements == 0) continue;
         const int iz = icell % nmesh_z;
         const int ix = icell / (nmesh_y * nmesh_z );
@@ -480,7 +481,7 @@ struct cell_pair * generate_cell_pairs_mocks(struct cellarray_mocks *lattice1,
                         continue;
                     }
 
-                    struct cellarray_mocks *second = &(lattice2[icell2]);
+                    cellarray_mocks *second = &(lattice2[icell2]);
                     DOUBLE closest_x1 = ZERO, closest_y1 = ZERO, closest_z1 = ZERO;
                     DOUBLE min_dx = ZERO, min_dy = ZERO, min_dz = ZERO;
 
@@ -555,6 +556,7 @@ cellarray_mocks * gridlink_mocks_theta_dec(const int64_t NPART,
                                                          const DOUBLE dec_min,const DOUBLE dec_max,
                                                          const DOUBLE max_dec_size,
                                                          const int dec_refine_factor,
+                                                         const int sort_on_z,
                                                          const DOUBLE thetamax,
                                                          int64_t *totncells,
                                                          const config_options *options)
@@ -782,7 +784,7 @@ cellarray_mocks * gridlink_mocks_theta_dec(const int64_t NPART,
             fprintf(stderr, "Error: In %s> The array to track the indices of input particle positions "
                     "should be the same size as the indices themselves\n", __FUNCTION__);
             fprintf(stderr,"Perhaps check that these two variables are the same type\n");
-            fprintf(stderr,"'original_index' within the 'struct cellarray', defined in 'cellarray.h.src' and \n");
+            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h.src' and \n");
             fprintf(stderr,"'original_indices' defined within function '%s' in file '%s'\n", __FUNCTION__, __FILE__);
             return NULL;
         }
@@ -848,8 +850,7 @@ cellarray_mocks * gridlink_mocks_theta_dec(const int64_t NPART,
 
     }//end of options->copy_particles == 0
 
-
-    if(options->sort_on_z) {
+    if(sort_on_z) {
         for(int64_t icell=0;icell<ngrid_dec;icell++) {
             cellarray_mocks *first = &lattice[icell];
             if(first->nelements == 0) continue;
@@ -936,7 +937,7 @@ struct cell_pair * generate_cell_pairs_mocks_theta_dec(cellarray_mocks *lattice1
 
     /* This ngb is a trivial function. Loop over +- idec from every cell. And that's a neighbour cell */
     for(int64_t icell=0;icell<totncells;icell++) {
-        struct cellarray_mocks *first = &(lattice1[icell]);
+        cellarray_mocks *first = &(lattice1[icell]);
         if(first->nelements == 0) continue;
 
         for(int idec=-dec_refine_factor;idec<=dec_refine_factor;idec++) {
@@ -952,7 +953,7 @@ struct cell_pair * generate_cell_pairs_mocks_theta_dec(cellarray_mocks *lattice1
                 continue;
             }
 
-            struct cellarray_mocks *second = &(lattice2[icell2]);
+            cellarray_mocks *second = &(lattice2[icell2]);
             const DOUBLE closest_x1 = ZERO, closest_y1 = ZERO;
             DOUBLE closest_z1 = ZERO;
             const DOUBLE min_dx = ZERO, min_dy = ZERO;
@@ -1013,6 +1014,7 @@ cellarray_mocks * gridlink_mocks_theta_ra_dec(const int64_t NPART,
                                                             const int max_dec_size,
                                                             const int ra_refine_factor,
                                                             const int dec_refine_factor,
+                                                            const int sort_on_z,
                                                             const DOUBLE thetamax,
                                                             int64_t *ncells,
                                                             int *ngrid_declination,
@@ -1364,7 +1366,7 @@ cellarray_mocks * gridlink_mocks_theta_ra_dec(const int64_t NPART,
             fprintf(stderr, "Error: In %s> The array to track the indices of input particle positions "
                     "should be the same size as the indices themselves\n", __FUNCTION__);
             fprintf(stderr,"Perhaps check that these two variables are the same type\n");
-            fprintf(stderr,"'original_index' within the 'struct cellarray', defined in 'cellarray.h.src' and \n");
+            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h.src' and \n");
             fprintf(stderr,"'original_indices' defined within function '%s' in file '%s'\n", __FUNCTION__, __FILE__);
             return NULL;
         }
@@ -1427,7 +1429,7 @@ cellarray_mocks * gridlink_mocks_theta_ra_dec(const int64_t NPART,
 
     }//end of options->copy_particles == 0
 
-    if(options->sort_on_z) {
+    if(sort_on_z) {
         for(int64_t icell=0;icell<totncells;icell++) {
             cellarray_mocks *first = &lattice[icell];
             if(first->nelements == 0) continue;
@@ -1542,7 +1544,7 @@ struct cell_pair * generate_cell_pairs_mocks_theta_ra_dec(cellarray_mocks *latti
         for(int ira=0;ira<ngrid_ra[idec];ira++) {
             const int64_t ra_base = ra_offset_for_dec[idec];
             const int64_t icell = ra_base + ira;
-            struct cellarray_mocks *first = &(lattice1[icell]);
+            cellarray_mocks *first = &(lattice1[icell]);
             if(first->nelements == 0) continue;
 
             int64_t num_ngb_this_cell = 0;
@@ -1576,7 +1578,7 @@ struct cell_pair * generate_cell_pairs_mocks_theta_ra_dec(cellarray_mocks *latti
                             "index for ngb cell = %"PRId64" should be less total number of cells = %"PRId64"\n",
                             icell2, totncells);
 
-                    struct cellarray_mocks *second = &(lattice2[icell2]);
+                    cellarray_mocks *second = &(lattice2[icell2]);
                     //For cases where we are not double-counting (i.e., auto-corrs), the same-cell
                     //must always be evaluated. In all other cases, (i.e., where double-counting is occurring)
                     //is used, include that in the ngb_cells! The interface is a lot cleaner in the double-counting

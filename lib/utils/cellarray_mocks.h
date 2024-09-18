@@ -13,8 +13,7 @@
 
 #include "weight_defs.h"
 
-typedef struct cellarray_mocks cellarray_mocks;
-struct cellarray_mocks{
+typedef struct {
     int64_t nelements;
     DOUBLE *x;
     DOUBLE *y;
@@ -39,4 +38,4 @@ struct cellarray_mocks{
     */
 
     uint8_t unused[7];//to maintain alignment explicitly (the compiler would insert this anyway)
-};
+} cellarray_mocks;

@@ -87,35 +87,14 @@ typedef struct {
     double boxsize_y;
     double boxsize_z;
 
-    /* Options for mocks */
-    // cosmology struct. Intentionally left anonymous, so I can
-    // directly access the fields.
-    struct {
-        double OMEGA_M;
-        double OMEGA_B;
-        double OMEGA_L;
-        double HUBBLE;
-        double LITTLE_H;
-        double SIGMA_8;
-        double NS;
-    };
-
-    /* Measures the time spent in the C API while accessed from python.
-       Enabled when the flag c_timer is set
-     */
-    double c_api_time;
-
     /* Per cell timers. Keeps track of the number of particles per cell pair
        and time spent to compute the pairs. Might slow down code */
     api_cell_timings *cell_timings;
     int64_t totncells_timings;
 
-    size_t float_type; /* floating point type -> vectorized supports double/float; fallback can support long double */
     isa_t instruction_set; /* select instruction set to run on */
 
-    char version[32]; /* fill in the version number */
     uint8_t verbose; /* Outputs progressbar and times */
-    uint8_t c_api_timer; /* Measures time spent in the C function */
     uint8_t c_cell_timer; /* Measures time spent per cell-pair. Might slow down the code */
 
     /* Options valid for both theory and mocks */
@@ -124,10 +103,6 @@ typedef struct {
 
     /* Options for theory */
     uint8_t periodic; /* count in periodic mode? flag ignored for wp/xi */
-    uint8_t sort_on_z; /* option to sort particles based on their Z coordinate in gridlink */
-
-    /* For DDrppi_mocks and vpf */
-    uint8_t is_comoving_dist; /* flag to indicate cz is already co-moving distance */
 
     /* the link_in_* variables control how the 3-D cell structure is created */
     uint8_t link_in_dec; /* relevant for DDtheta_mocks */
@@ -223,7 +198,6 @@ static inline void reset_bin_refine_factors(config_options *options)
 }
 
 
-
 static inline void set_max_cells(config_options *options, const int max)
 {
     if(max <=0) {
@@ -292,11 +266,6 @@ static inline config_options get_config_options(const char *weight_method){
     weight_struct *w1 = &(options.weights1);
     w0->num_weights = get_num_weights_by_method(options.weight_method);
     w1->num_weights = w0->num_weights;
-    BUILD_BUG_OR_ZERO(sizeof(options.max_cells_per_dim) == sizeof(int16_t), max_cells_per_dim_must_be_16_bits);
-    BUILD_BUG_OR_ZERO(sizeof(options.binning_flags) == sizeof(uint32_t), binning_flags_must_be_32_bits);
-    BUILD_BUG_OR_ZERO(sizeof(options.bin_refine_factors[0]) == sizeof(int8_t), bin_refine_factors_must_be_8_bits);
-
-    snprintf(options.version, sizeof(options.version)/sizeof(char)-1, "%s", API_VERSION);
 
     // If periodic, BOXSIZE_NOTGIVEN requires the user to set a boxsize.
     // A value of 0 will use automatic detection of the particle extent.
@@ -305,7 +274,6 @@ static inline config_options get_config_options(const char *weight_method){
     options.boxsize_y = BOXSIZE_NOTGIVEN;
     options.boxsize_z = BOXSIZE_NOTGIVEN;
 
-    options.float_type = sizeof(DOUBLE);
     options.verbose = 1;
     options.need_avg_sep = 1;
     options.periodic = 1;
@@ -341,8 +309,6 @@ static inline config_options get_config_options(const char *weight_method){
     
     options.fast_acos=1;
 
-    options.is_comoving_dist=1;
-
     /* Config options introduced in Corrfunc v2.3*/
     options.copy_particles = 1;/* make a copy of particles (positions and weights) (by default) */
     
@@ -363,23 +329,6 @@ static inline config_options get_config_options(const char *weight_method){
     reset_max_cells(&options);
     reset_bin_refine_factors(&options);
     return options;
-}
-
-static inline void print_cell_timings(config_options *options)
-{
-    fprintf(stderr,"#########################################################################\n");
-    fprintf(stderr,"#  Cell_1    Cell_2          N1          N2        Time_ns     ThreadID  \n");
-    fprintf(stderr,"#########################################################################\n");
-    for(int64_t i=0;i<options->totncells_timings;i++) {
-        fprintf(stderr,"%8d %8d %12" PRId64 " %12" PRId64 " %12" PRId64 " %12d\n",
-                options->cell_timings[i].first_cellindex,
-                options->cell_timings[i].second_cellindex,
-                options->cell_timings[i].N1,
-                options->cell_timings[i].N2,
-                options->cell_timings[i].time_in_ns,
-                options->cell_timings[i].tid);
-    }
-
 }
 
 static inline void free_cell_timings(config_options *options)

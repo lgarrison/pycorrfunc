@@ -11,10 +11,10 @@
 
 #include <stdint.h>
 
-#include "defs.h"  //for definition of config_options
-#include "cellarray.h" //for definition of struct cellarray_double/float
-#include "cell_pair.h" //for definition of struct cell_pair_double/float
-#include "weight_defs.h" //for definition of weight_struct
+#include "defs.h"
+#include "cellarray.h"
+#include "cell_pair.h"
+#include "weight_defs.h"
 
 cellarray * gridlink(
     const int64_t np,
@@ -31,14 +31,15 @@ cellarray * gridlink(
     const int xbin_refine_factor,
     const int ybin_refine_factor,
     const int zbin_refine_factor,
+    const int sort_on_z,
     int *nlattice_x,
     int *nlattice_y,
     int *nlattice_z,
     const config_options *options) __attribute__((warn_unused_result));
 
 struct cell_pair * generate_cell_pairs(
-    struct cellarray *lattice1,
-    struct cellarray *lattice2,
+    cellarray *lattice1,
+    cellarray *lattice2,
     const int64_t totncells,
     int64_t *ncell_pairs,
     const int xbin_refine_factor, const int ybin_refine_factor, const int zbin_refine_factor,
@@ -50,4 +51,4 @@ struct cell_pair * generate_cell_pairs(
     const int periodic_x, const int periodic_y, const int periodic_z)
     __attribute__((warn_unused_result));
 
-void free_cellarray(cellarray *lattice, const int64_t totncells);
+void free_cellarray(cellarray *lattice);

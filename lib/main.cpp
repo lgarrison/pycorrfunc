@@ -1,13 +1,13 @@
 #include <optional>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
-
-#ifdef _OPENMP
-#include <omp.h>
-#endif
 
 extern "C" {
     #include "theory/DD/countpairs.h"

@@ -15,6 +15,7 @@ project(
 
 py = import('python').find_installation(pure: false)
 nanobind_dep = dependency('nanobind', static: true)
+openmp_dep = dependency('openmp', language: 'c', required: get_option('openmp'))
 
 simd = import('unstable-simd')
 
@@ -56,6 +57,7 @@ sources = [
   'lib/theory/DD/countpairs.c',
   'lib/utils/gridlink_utils.c',
   'lib/main.cpp',
+  'lib/cpp_utils.cpp',
   # 'lib/utils/avx512_calls.c',
   'lib/utils/gridlink_impl.c',
   'lib/utils/gridlink_mocks_impl.c',
@@ -70,7 +72,7 @@ extension_kwargs = {
   'install' : true,
   'subdir' : 'pycorrfunc',
   'include_directories' : inc,
-  'dependencies' : [nanobind_dep],
+  'dependencies' : [nanobind_dep, openmp_dep],
 }
 
 corrfunc_double = py.extension_module(

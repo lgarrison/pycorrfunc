@@ -23,7 +23,7 @@
     extern void get_max_min(const int64_t ND1, const DOUBLE * restrict X1, const DOUBLE * restrict Y1, const DOUBLE * restrict Z1,
                                    DOUBLE *min_x, DOUBLE *min_y, DOUBLE *min_z, DOUBLE *max_x, DOUBLE *max_y, DOUBLE *max_z);
 
-    extern int reorder_particles_back_into_original_order(const int64_t np, int64_t *original_indices, DOUBLE *X,
+    extern int restore_particle_order(const int64_t np, int64_t *original_indices, DOUBLE *X,
                                                                  DOUBLE *Y, DOUBLE *Z, weight_struct *weights);
 
     extern int reorder_particles_mocks_back_into_original_order(const int64_t np, int64_t *original_indices, weight_struct *weights);

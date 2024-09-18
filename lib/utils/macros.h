@@ -30,18 +30,6 @@
         thread_timings->second_cellindex = second_cellid;               \
     }
 
-/* Taken from http://stackoverflow.com/questions/19403233/compile-time-struct-size-check-error-out-if-odd
-   which is in turn taken from the linux kernel */
-/* #define BUILD_BUG_OR_ZERO(e) (sizeof(struct{ int:-!!(e);})) */
-/* #define ENSURE_STRUCT_SIZE(e, size)  BUILD_BUG_OR_ZERO(sizeof(e) != size) */
-/* However, the previous one gives me an unused-value warning and I do not want
-   to turn that compiler warning off. Therefore, this version, which results in
-   an unused local typedef warning is used. I turn off the corresponding warning
-   in common.mk (-Wno-unused-local-typedefs) via CFLAGS
-*/
-#define BUILD_BUG_OR_ZERO(cond, msg)
-#define ENSURE_STRUCT_SIZE(e, size)             
-
 /* Macro Constants */
 //Just to output some colors
 #define ANSI_COLOR_RED     "\x1b[31m"

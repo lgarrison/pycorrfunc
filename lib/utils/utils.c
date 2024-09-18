@@ -411,7 +411,7 @@ void parallel_cumsum(const int64_t *a, const int64_t N, int64_t *cumsum){
     }
     
     #ifdef _OPENMP
-    #pragma omp parallel num_threads(nthreads) num_threads(options->numthreads)
+    #pragma omp parallel num_threads(nthreads)
     #endif
     {
         #ifdef _OPENMP

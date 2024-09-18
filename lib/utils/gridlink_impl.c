@@ -33,11 +33,8 @@
 void warn_flat_dim(const char *dim);
 
 
-void free_cellarray(cellarray *lattice, const int64_t totncells)
+void free_cellarray(cellarray *lattice)
 {
-    // `totncells` is currently unused, but no need to break the C API.
-    (void) totncells;
-    
     // If we have not copied the particles, the lattice does not own the memory
     // and the only thing to free is the original index
     if(lattice[0].owns_memory == 0) {
@@ -76,6 +73,7 @@ cellarray * gridlink(const int64_t NPART,
                                    const int xbin_refine_factor,
                                    const int ybin_refine_factor,
                                    const int zbin_refine_factor,
+                                   const int sort_on_z,
                                    int *nlattice_x,
                                    int *nlattice_y,
                                    int *nlattice_z,
@@ -333,7 +331,7 @@ cellarray * gridlink(const int64_t NPART,
             fprintf(stderr, "Error: In %s> The array to track the indices of input particle positions "
                     "should be the same size as the indices themselves\n", __FUNCTION__);
             fprintf(stderr,"Perhaps check that these two variables are the same type\n");
-            fprintf(stderr,"'original_index' within the 'struct cellarray', defined in 'cellarray.h.src' and \n");
+            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h.src' and \n");
             fprintf(stderr,"'original_indices' defined within function '%s' in file '%s'\n", __FUNCTION__, __FILE__);
             return NULL;
         }
@@ -377,7 +375,7 @@ cellarray * gridlink(const int64_t NPART,
     free(all_cell_indices);  //Done with re-ordering the particles
 
     /* Do we need to sort the particles in Z ? */
-    if(options->sort_on_z) {
+    if(sort_on_z) {
 #if defined(_OPENMP)
 #pragma omp parallel for schedule(dynamic) num_threads(options->numthreads)
 #endif
@@ -436,8 +434,8 @@ cellarray * gridlink(const int64_t NPART,
 }
 
 
-struct cell_pair * generate_cell_pairs(struct cellarray *lattice1,
-                                                     struct cellarray *lattice2,
+struct cell_pair * generate_cell_pairs(cellarray *lattice1,
+                                                     cellarray *lattice2,
                                                      const int64_t totncells,
                                                      int64_t *ncell_pairs,
                                                      const int xbin_refine_factor, const int ybin_refine_factor, const int zbin_refine_factor,
@@ -486,7 +484,7 @@ struct cell_pair * generate_cell_pairs(struct cellarray *lattice1,
                                                  nmesh_y < (2*ybin_refine_factor + 1) ||
                                                  nmesh_z < (2*zbin_refine_factor + 1))  ) ? 1:0;
     for(int64_t icell=0;icell<totncells;icell++) {
-        struct cellarray *first = &(lattice1[icell]);
+        cellarray *first = &(lattice1[icell]);
         if(first->nelements == 0) continue;
         const int iz = icell % nmesh_z;
         const int ix = icell / (nmesh_y * nmesh_z );
@@ -532,7 +530,7 @@ struct cell_pair * generate_cell_pairs(struct cellarray *lattice1,
                         CHECK_AND_CONTINUE_FOR_DUPLICATE_NGB_CELLS(icell, icell2, off_xwrap, off_ywrap, off_zwrap, num_cell_pairs, num_ngb_this_cell, all_cell_pairs);
                     }
 
-                    struct cellarray *second = &(lattice2[icell2]);
+                    cellarray *second = &(lattice2[icell2]);
                     DOUBLE closest_x1 = ZERO, closest_y1 = ZERO, closest_z1 = ZERO;
                     DOUBLE min_dx = ZERO, min_dy = ZERO, min_dz = ZERO;
                     if(enable_min_sep_opt) {

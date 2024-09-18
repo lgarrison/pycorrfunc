@@ -13,8 +13,7 @@
 
 #include "weight_defs.h"
 
-typedef struct cellarray cellarray;
-struct cellarray{
+typedef struct {
     int64_t nelements;//Here the xyz positions will be stored in their individual pointers. More amenable to sorting -> used by wp and xi
     DOUBLE *x;
     DOUBLE *y;
@@ -33,4 +32,4 @@ struct cellarray{
       after calculations are done. Only relevant if external
       pointers are being used for x/y/z
     */
-};
+} cellarray;
