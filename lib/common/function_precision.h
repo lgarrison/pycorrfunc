@@ -1,14 +1,4 @@
-/* File: function_precision.h */
-/*
-  This file is a part of the Corrfunc package
-  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
-  License: MIT LICENSE. See LICENSE file under the top-level
-  directory at https://github.com/manodeep/Corrfunc/
-*/
-
 #pragma once
-
-
 
 #ifndef M_PI
 #define M_PI            3.14159265358979323846264338327950288
@@ -18,7 +8,7 @@
 #define INV_PI_OVER_180   57.29577951308232087679815481410517033240547246656432154916024
 
 //Define the Macros
-#ifdef CORRFUNC_USE_DOUBLE
+#ifdef PYCORRFUNC_USE_DOUBLE
 #define COSD(X)            cos(X*PI_OVER_180)
 #define SIND(X)            sin(X*PI_OVER_180)
 #else
@@ -52,7 +42,7 @@
 
 #include <float.h>
     
-#ifdef CORRFUNC_USE_DOUBLE
+#ifdef PYCORRFUNC_USE_DOUBLE
 #define REAL_FORMAT "lf"
 #define NVEC   NVECD
 #define ZERO   0.0
@@ -67,7 +57,9 @@
 #define ASIN   asin
 #define POW    pow
 #define ABS    fabs
-#define MAX_POSITIVE_FLOAT DBL_MAX
+#define FMIN   fmin
+#define FMAX   fmax
+#define MAX_DOUBLE DBL_MAX
 #else
 #define REAL_FORMAT "f"
 #define NVEC   NVECF
@@ -83,5 +75,7 @@
 #define ASIN   asinf
 #define POW    powf
 #define ABS    fabsf
-#define MAX_POSITIVE_FLOAT FLT_MAX
+#define FMIN   fminf
+#define FMAX   fmaxf
+#define MAX_DOUBLE FLT_MAX
 #endif

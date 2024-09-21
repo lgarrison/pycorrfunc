@@ -1,33 +1,9 @@
-/* File: utils.c */
-/*
-  This file is a part of the Corrfunc package
-  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
-  License: MIT LICENSE. See LICENSE file under the top-level
-  directory at https://github.com/manodeep/Corrfunc/
-*/
-
-/*
-  A collection of C wrappers I use. Should be
-  very obvious. The ones that are not obvious
-  have comments before the function itself.
-
-  Bugs:
-  Please email me manodeep at gmail dot com
-
-  Ver 1.0: Manodeep Sinha, 2nd April, 2012
-  Ver 1.1: Manodeep Sinha, 14th June, 2012 - replaced
-  check_string_copy with a "real" wrapper to
-  snprintf.
-  Ver 1.2: Manodeep Sinha, Jan 8, 2012 - replaced
-  print_time with timeval and gettimeofday
-*/
-
-#include<inttypes.h>//defines PRId64 for printing int64_t + includes stdint.h
-#include<math.h>
-#include<string.h>
-#include<limits.h>
-#include<stdarg.h>
-#include<ctype.h>
+#include <inttypes.h>//defines PRId64 for printing int64_t + includes stdint.h
+#include <math.h>
+#include <string.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <ctype.h>
 #include <time.h>
 
 #include "macros.h"
@@ -40,24 +16,6 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
-void get_max_float(const int64_t ND1, const float *cz1, float *czmax)
-{
-    float max=*czmax;
-    for(int64_t i=0;i<ND1;i++) {
-        if(cz1[i] > max) max = cz1[i];
-    }
-    *czmax = max;
-}
-
-void get_max_double(const int64_t ND1, const double *cz1, double *czmax)
-{
-    double max=*czmax;
-    for(int64_t i=0;i<ND1;i++) {
-        if(cz1[i] > max) max = cz1[i];
-    }
-    *czmax = max;
-}
 
 // A real wrapper to snprintf that will exit() if the allocated buffer length
 // was not sufficient. Usage is the same as snprintf
@@ -76,53 +34,6 @@ int my_snprintf(char *buffer,int len,const char *format, ...)
         return -1;
     }
     return nwritten;
-}
-
-int is_big_endian(void)
-{
-    union {
-        uint32_t i;
-        char c[4];
-    } e = { 0x01000000 };
-
-    return e.c[0];
-}
-
-void byte_swap(char * const in, const size_t size, char *out)
-{
-    if(size > 16) {
-        fprintf(stderr,"WARNING: In %s> About to byte_swap %zu bytes but no intrinsic C data-type exists with size larger than 16 bytes",
-                __FUNCTION__, size);
-    }
-    //point to the last byte
-    char *in_char = (char *) in + (size - 1UL);
-
-    //point to the first byte in output
-    char *out_char = out;
-
-    //Start filling in from the front in the output string
-    //taking input from the end of the input
-    for(size_t i=0;i<size;i++) {
-        *out_char = *in_char;
-        out_char++;
-        in_char--;
-    }
-
-}
-
-
-
-//Taken from the inter-webs: http://stackoverflow.com/questions/1024389/print-an-int-in-binary-representation-using-c
-char * int2bin(int a, char *buffer, int buf_size)
-{
-    buffer += (buf_size - 1);
-    for (int i = 31; i >= 0; i--) {
-        *buffer-- = (a & 1) + '0';
-
-        a >>= 1;
-    }
-
-    return buffer;
 }
 
 
@@ -245,22 +156,6 @@ void print_time(struct timeval t0,struct timeval t1,const char *s)
 }
 
 
-//wrapper for realloc. varname should contain the name of the
-//variable being re-allocated -> helps debugging in case of a crash.
-
-void* my_realloc(void *x,size_t size,int64_t N,const char *varname)
-{
-    void *tmp = realloc(x,N*size);
-
-    if (tmp==NULL) {
-        fprintf(stderr,"ERROR: Could not reallocate for %"PRId64" elements with %zu size for variable `%s' ..aborting\n",N,size,varname);
-        perror(NULL);
-    }
-
-    return tmp;
-
-}
-
 void* my_malloc(size_t size,int64_t N)
 {
     void *x = malloc(N*size);
@@ -268,6 +163,9 @@ void* my_malloc(size_t size,int64_t N)
         fprintf(stderr,"malloc for %"PRId64" elements with %zu bytes failed...\n",N,size);
         perror(NULL);
     }
+
+    // poison
+    // memset(x, 0x5a, N*size);
 
     return x;
 }
@@ -348,23 +246,6 @@ void **matrix_calloc(size_t size,int64_t nrow,int64_t ncol)
     }
 
     return m;
-}
-
-
-// Resize a matrix.  Returns EXIT_SUCCESS or EXIT_FAILURE.
-// Presently only resizing the last dimension is supported, due to
-// potential memory leaks when shrinking the first dimension
-int matrix_realloc(void **matrix, size_t size, int64_t nrow, int64_t ncol){
-    void *tmp;
-    for(int i = 0; i < nrow; i++){
-        tmp = my_realloc(matrix[i], size, ncol, "matrix_realloc");
-        if(tmp == NULL){
-            return EXIT_FAILURE;
-        }
-        matrix[i] = tmp;
-    }
-
-    return EXIT_SUCCESS;
 }
 
 

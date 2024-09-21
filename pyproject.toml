@@ -12,8 +12,10 @@ authors = [
 ]
 dependencies = [
   'numpy',
+  'astropy',
 ]
 license = { file = "LICENSE" }
 
 [tool.meson-python.args]
 compile = ["-v"]
+# setup = ["-Dbuildtype=debug"]

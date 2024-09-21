@@ -6,39 +6,34 @@
 #include "function_precision.h"
 #include "utils.h"
 
-#include "weight_functions.h"
+#include "weights.h"
 #include "kernelfuncs.h"
 
 
-int countpairs_fallback(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, const weight_struct *weights0,
-                                             const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, const weight_struct *weights1,
-                                             const int same_cell,
-                                             const DOUBLE sqr_rpmax, const DOUBLE sqr_rpmin, const int nbin, const DOUBLE *rupp_sqr, const DOUBLE rpmax,
-                                             const DOUBLE off_xwrap, const DOUBLE off_ywrap, const DOUBLE off_zwrap,
-                                             const DOUBLE min_xdiff, const DOUBLE min_ydiff, const DOUBLE min_zdiff,
-                                             const DOUBLE closest_icell_xpos, const DOUBLE closest_icell_ypos, const DOUBLE closest_icell_zpos,
-                                             DOUBLE *restrict src_rpavg, uint64_t *restrict src_npairs,
-                                             DOUBLE *restrict src_weighted_pairs, const weight_method_t weight_method)
+int countpairs_fallback(
+    uint64_t *restrict src_npairs, DOUBLE *restrict src_ravg, DOUBLE *restrict src_weighted_pairs,
+    const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, DOUBLE *w0,
+    const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, DOUBLE *w1,
+    const int same_cell,
+    const DOUBLE sqr_rmax, const DOUBLE sqr_rmin, const int nbinedge, const DOUBLE *rupp_sqr, const DOUBLE rmax,
+    const DOUBLE off_xwrap, const DOUBLE off_ywrap, const DOUBLE off_zwrap,
+    const DOUBLE min_xdiff, const DOUBLE min_ydiff, const DOUBLE min_zdiff,
+    const DOUBLE closest_icell_xpos, const DOUBLE closest_icell_ypos, const DOUBLE closest_icell_zpos,
+    const weight_method_t weight_method)
 {
-    /*----------------- FALLBACK CODE --------------------*/
-    /* implementation that is guaranteed to compile */
 
-    pair_struct pair = {.num_weights=0};
-    weight_func_t weight_func = NULL;
-    if(src_weighted_pairs != NULL){
-        pair.num_weights = weights0->num_weights;
-        weight_func = get_weight_func_by_method(weight_method);
-    }
+    weight_func_t weight_func = get_weight_func_by_method(weight_method);
 
     const DOUBLE *zstart = z1, *zend = z1 + N1;
-    const DOUBLE max_all_dz = SQRT(rpmax*rpmax - min_xdiff*min_xdiff - min_ydiff*min_ydiff);
+    const DOUBLE max_all_dz = SQRT(rmax*rmax - min_xdiff*min_xdiff - min_ydiff*min_ydiff);
     for(int64_t i=0;i<N0;i++) {
         const DOUBLE xpos = *x0++ + off_xwrap;
         const DOUBLE ypos = *y0++ + off_ywrap;
         const DOUBLE zpos = *z0++ + off_zwrap;
-        for(int w = 0; w < pair.num_weights; w++){
-            pair.weights0[w].d = *(weights0->weights[w] + i);
-        }
+        DOUBLE wi = 0.;
+        if(weight_method != NONE) wi = *w0++;
+
+            
         DOUBLE max_dz = max_all_dz;
 
         /* Now consider if this i'th particle can be a valid pair with ANY of the remaining
@@ -50,6 +45,8 @@ int countpairs_fallback(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, co
            particle
         */
         const DOUBLE this_dz = *z1 - zpos;
+        // printf("this_dz: %f\n", this_dz);
+        // printf("max_all_dz: %f\n", max_all_dz);
         if(this_dz >= max_all_dz) {
             continue;
         }
@@ -64,10 +61,10 @@ int countpairs_fallback(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, co
             const DOUBLE min_dy = min_ydiff > 0 ? min_ydiff + FABS(ypos - closest_icell_ypos):min_ydiff;
             const DOUBLE min_dz = min_zdiff > 0 ? (this_dz > 0 ? this_dz:min_zdiff + FABS(zpos - closest_icell_zpos)):min_zdiff;
             const DOUBLE sqr_min_sep_this_point = min_dx*min_dx + min_dy*min_dy + min_dz*min_dz;
-            if(sqr_min_sep_this_point >= sqr_rpmax) {
+            if(sqr_min_sep_this_point >= sqr_rmax) {
                 continue;
             }
-            max_dz = SQRT(sqr_rpmax - min_dx*min_dx - min_dy*min_dy);
+            max_dz = SQRT(sqr_rmax - min_dx*min_dx - min_dy*min_dy);
 
             // Now "fast forward" in the list of secondary particles to find the first one that satisfies the max_all_dz constraint
             // We don't consider the i particle's x,y information yet, because those aren't sorted
@@ -93,47 +90,36 @@ int countpairs_fallback(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, co
         const int64_t nleft = zend - localz1;
         DOUBLE *localx1 = x1 + n_off;
         DOUBLE *localy1 = y1 + n_off;
+        DOUBLE *localw1 = NULL;
+        if(weight_method != NONE) localw1 = w1 + n_off;
 
         for(int64_t j=0;j<nleft;j++) {
             const DOUBLE dx = *localx1++ - xpos;
             const DOUBLE dy = *localy1++ - ypos;
             const DOUBLE dz = *localz1++ - zpos;
+            DOUBLE wj = 0.;
+            if(weight_method != NONE) wj = *localw1++;
             if(dz >= max_dz) break;
 
             const DOUBLE r2 = dx*dx + dy*dy + dz*dz;
-            if(r2 >= sqr_rpmax || r2 < sqr_rpmin) continue;
+            if(r2 >= sqr_rmax || r2 < sqr_rmin) continue;
 
-            DOUBLE pairweight = ZERO;
-            if(src_weighted_pairs != NULL){
-                for(int w = 0; w < pair.num_weights; w++){
-                    pair.weights1[w].d = *(weights1->weights[w] + n_off + j);
-                }
-                
-                pair.dx.d = dx;
-                pair.dy.d = dy;
-                pair.dz.d = dz;
-                pairweight = weight_func(&pair);
-            }
+            DOUBLE pairweight;
+            if(weight_method != NONE) pairweight = weight_func(dx, dy, dz, wi, wj);
 
-            for(int kbin=nbin-1;kbin>=1;kbin--){
-                if(r2 >= rupp_sqr[kbin-1]) {
-                    src_npairs[kbin - 1]++;
-
-                    printf("src_npairs is: ");
-                    for (int i = 0; i < 2; i++) {
-                        printf("%lu ", src_npairs[i]);
-                    }
-                    printf("\n");
+            for(int kbin=nbinedge-2;kbin>=0;kbin--){
+                if(r2 >= rupp_sqr[kbin]) {
+                    src_npairs[kbin]++;
                     
-                    if(src_rpavg != NULL) {
-                        src_rpavg[kbin - 1] += SQRT(r2);
+                    if(src_ravg != NULL) {
+                        src_ravg[kbin] += SQRT(r2);
                     }
-                    if(src_weighted_pairs != NULL){
-                        src_weighted_pairs[kbin - 1] += pairweight;
+                    if(weight_method != NONE){
+                        src_weighted_pairs[kbin] += pairweight;
                     }
                     break;
                 }
-            }//searching for kbin loop
+            }  // kbin loop
         }
     }
 

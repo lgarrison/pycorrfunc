@@ -1,10 +1,6 @@
-/* File: fast_acos.h */
 /*
   This file is covered by the original Boost License
   for http://www.geometrictools.com/.
-
-  Distributed as part of Corrfunc package
-  at https://github.com/manodeep/Corrfunc/
 */
 
 #pragma once

@@ -1,12 +1,3 @@
-// # -*- mode: c -*-
-/* File: gridlink_mocks_impl.h.src */
-/*
-  This file is a part of the Corrfunc package
-  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
-  License: MIT LICENSE. See LICENSE file under the top-level
-  directory at https://github.com/manodeep/Corrfunc/
-*/
-
 #pragma once
 
 #include <stdint.h>
@@ -14,7 +5,6 @@
 #include "defs.h"
 #include "cellarray_mocks.h"
 #include "cell_pair.h"
-#include "weight_defs.h" //for definition of weight_struct
 
     /* Functions related to DDrppi_mocks/DDsmu_mocks */
     extern cellarray_mocks * gridlink_mocks(const int64_t np,

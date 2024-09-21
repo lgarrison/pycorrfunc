@@ -1,11 +1,3 @@
-/* File: avx512_calls.h */
-/*
-  This file is a part of the Corrfunc package
-  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
-  License: MIT LICENSE. See LICENSE file under the top-level
-  directory at https://github.com/manodeep/Corrfunc/
-*/
-
 #pragma once
 
 #if defined(__AVX512F__)
@@ -51,7 +43,7 @@
 #   define B14(n) B12(n), B12(n+1), B12(n+1), B12(n+2)
 #   define B16(n) B14(0),B14(1), B14(1),   B14(2)
 
-#ifndef CORRFUNC_USE_DOUBLE
+#ifndef PYCORRFUNC_USE_DOUBLE
 
 #define AVX512_NVEC                         16    
 #define AVX512_MASK                         __mmask16
@@ -320,7 +312,7 @@
 #define AVX512_CAST_FLOAT_TO_INT(X)          _mm512_castpd_si512(X)
 #define AVX512_CAST_INT_TO_FLOAT(X)          _mm512_castsi512_pd(_mm512_castsi256_si512(X))
 
-#endif //CORRFUNC_USE_DOUBLE
+#endif //PYCORRFUNC_USE_DOUBLE
 
 #ifndef  __INTEL_COMPILER
 #include "fast_acos.h"
@@ -363,7 +355,7 @@ static inline AVX512_FLOATS inv_cosine_avx512(const AVX512_FLOATS X, const int o
 
     extern const int64_t bits_set_in_avx512_mask[];
 
-    #ifdef CORRFUNC_USE_DOUBLE
+    #ifdef PYCORRFUNC_USE_DOUBLE
         extern const uint8_t masks_per_misalignment_value[];
     #else
         extern const uint16_t masks_per_misalignment_value[];

@@ -1,10 +1,4 @@
-/* File: progressbar.c */
-/*
-  This file is a part of the Corrfunc package
-  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
-  License: MIT LICENSE. See LICENSE file under the top-level
-  directory at https://github.com/manodeep/Corrfunc/
-*/
+// FUTURE: in theory, we could update a tqdm progress bar via nanobind. Would that hurt performance?
 
 #include "progressbar.h"
 #include "utils.h"

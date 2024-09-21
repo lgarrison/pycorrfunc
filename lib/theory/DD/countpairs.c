@@ -14,7 +14,7 @@
 #include "function_precision.h"
 #include "utils.h"
 
-#include "weight_functions.h"
+#include "weights.h"
 
 #include "defs.h"
 #include "utils.h"
@@ -23,13 +23,16 @@
 #include "gridlink_impl.h"
 #include "gridlink_utils.h"
 
+#include "simdconfig.h"
+
 #ifdef _OPENMP
 #include <omp.h>
 #else
 int omp_get_thread_num(void) { return 0; }
 #endif
 
-countpairs_func_ptr countpairs_driver(const config_options *options) {
+
+kernel_func_ptr countpairs_driver(const config_options *options) {
     // If options.isa == FASTEST, use the fastest where both:
     //  1) the HAVE_<ISA> macro is defined, and 
     //  2) the <isa>_available() function returns true.
@@ -37,7 +40,7 @@ countpairs_func_ptr countpairs_driver(const config_options *options) {
 
     int err_if_not_avail = options->instruction_set != FASTEST;
 
-    countpairs_func_ptr function = NULL;
+    kernel_func_ptr function = NULL;
     switch(options->instruction_set) {
         case FASTEST:
             // fallthrough
@@ -92,34 +95,48 @@ countpairs_func_ptr countpairs_driver(const config_options *options) {
     return function;
 }
 
-int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
-               const int64_t ND2, DOUBLE *X2, DOUBLE *Y2, DOUBLE *Z2,
+int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1,
+               const int64_t ND2, DOUBLE *X2, DOUBLE *Y2, DOUBLE *Z2, DOUBLE *W2,
                const int64_t N_bin_edges, const DOUBLE *bin_edges,
                config_options *options,
                uint64_t *npairs,
                DOUBLE *rpavg,
-               DOUBLE *weighted_pairs){
+               DOUBLE *wavg){
 
-    const int need_weighted_pairs = options->weight_method != NONE;
+    const int need_wavg = options->weight_method != NONE;
     const int sort_on_z = 1;
 
     /* runtime dispatch - get the function pointer */
-    countpairs_func_ptr countpairs_function = countpairs_driver(options);
+    kernel_func_ptr countpairs_function = countpairs_driver(options);
     
     if(countpairs_function == NULL) {
         return EXIT_FAILURE;
     }
 
-    /***********************
-     *initializing the bins
-     ************************/
-    // DOUBLE rmin = bin_edges[0];
-    const double rmax = bin_edges[N_bin_edges - 1];
+    // Setup the bin edges
+    // const DOUBLE rmin = bin_edges[0];
+    const DOUBLE rmax = bin_edges[N_bin_edges - 1];
+
+    DOUBLE bin_edges_sqr[N_bin_edges];
+    for(int i=0; i < N_bin_edges;i++) {
+        bin_edges_sqr[i] = bin_edges[i]*bin_edges[i];
+    }
+
+    DOUBLE sqr_rmax=bin_edges_sqr[N_bin_edges-1];
+    DOUBLE sqr_rmin=bin_edges_sqr[0];
+
+
+    // determine the periodicity request
+    const int periodic_x = options->boxsize_x > 0;
+    const int periodic_y = options->boxsize_y > 0;
+    const int periodic_z = options->boxsize_z > 0;
+
+    const DOUBLE xwrap = periodic_x ? options->boxsize_x : 0.;
+    const DOUBLE ywrap = periodic_y ? options->boxsize_y : 0.;
+    const DOUBLE zwrap = periodic_z ? options->boxsize_z : 0.;
   
-    //Find the min/max of the data
+    // Determine the spatial particle extents
     DOUBLE xmin, xmax, ymin, ymax, zmin, zmax;
-    xmin = ymin = zmin = MAX_POSITIVE_FLOAT;
-    xmax = ymax = zmax = -MAX_POSITIVE_FLOAT;
     get_max_min(ND1, X1, Y1, Z1, &xmin, &ymin, &zmin, &xmax, &ymax, &zmax);
 
     if(options->autocorr==0) {
@@ -132,19 +149,6 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
             fprintf(stderr,"ND2 = %12"PRId64" [xmin,ymin,zmin] = [%lf,%lf,%lf], [xmax,ymax,zmax] = [%lf,%lf,%lf]\n",ND2,xmin,ymin,zmin,xmax,ymax,zmax);
         }
     }
-    
-    const double boxsize_y = options->boxsize_y == BOXSIZE_NOTGIVEN ? options->boxsize : options->boxsize_y;
-    const double boxsize_z = options->boxsize_z == BOXSIZE_NOTGIVEN ? options->boxsize : options->boxsize_z;
-
-    const int periodic_x = options->periodic && options->boxsize_x >= 0;
-    const int periodic_y = options->periodic && boxsize_y >= 0;
-    const int periodic_z = options->periodic && boxsize_z >= 0;
-
-    // If periodic (L!=-1), use given boxsize (L>0) or auto-detect (L==0). If not, set wrap value to 0.
-    const DOUBLE xwrap = periodic_x ? (options->boxsize_x > 0 ? options->boxsize_x : (xmax-xmin)) : 0.;
-    const DOUBLE ywrap = periodic_y ? (boxsize_y > 0 ? boxsize_y : (ymax-ymin)) : 0.;
-    const DOUBLE zwrap = periodic_z ? (boxsize_z > 0 ? boxsize_z : (zmax-zmin)) : 0.;
-    const DOUBLE pimax = (DOUBLE) rmax;
     
     if(options->verbose) {
         if(periodic_x) {
@@ -164,6 +168,7 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
         }
     }
     
+    // Set the bin refine factors
     if(get_bin_refine_scheme(options) == BINNING_DFL) {
         if(rmax < 0.05*xwrap) {
             options->bin_refine_factors[0] = 1;
@@ -171,52 +176,61 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
         if(rmax < 0.05*ywrap) {
             options->bin_refine_factors[1] = 1;
         }
-        if(pimax < 0.05*zwrap) { //pimax := rmax. Here to prevent copy-pasting bugs
+        if(rmax < 0.05*zwrap) {
             options->bin_refine_factors[2] = 1;
         }
     }
 
-    /*---Create 3-D lattice--------------------------------------*/
-    int nmesh_x=0,nmesh_y=0,nmesh_z=0;
-    cellarray *lattice1 = gridlink(ND1, X1, Y1, Z1, &(options->weights0),
-                                                 xmin, xmax, ymin, ymax, zmin, zmax,
-                                                 rmax, rmax, rmax,
-                                                 xwrap, ywrap, zwrap,
-                                                 options->bin_refine_factors[0],
-                                                 options->bin_refine_factors[1],
-                                                 options->bin_refine_factors[2],
-                                                 sort_on_z,
-                                                 &nmesh_x, &nmesh_y, &nmesh_z, options);
-    if(lattice1 == NULL) {
+    // Divide the particles into cells
+    cellarray lattice1 = {0};
+    int gstatus = gridlink(
+        &lattice1,
+        ND1, X1, Y1, Z1, W1,
+        xmin, xmax, ymin, ymax, zmin, zmax,
+        rmax, rmax, rmax,
+        xwrap, ywrap, zwrap,
+        options->bin_refine_factors[0],
+        options->bin_refine_factors[1],
+        options->bin_refine_factors[2],
+        sort_on_z,
+        options
+        );
+
+    if(gstatus != EXIT_SUCCESS) {
+        free_cellarray(&lattice1);
         return EXIT_FAILURE;
     }
 
     /* If there too few cells (BOOST_CELL_THRESH is ~10), and the number of cells can be increased, then boost bin refine factor by ~1*/
-    const double avg_np = ((double)ND1)/(nmesh_x*nmesh_y*nmesh_z);
-    const int max_nmesh = fmax(nmesh_x, fmax(nmesh_y, nmesh_z));
+    // TODO: don't regrid!! Compute these stats beforehand.
+    const double avg_np = ((double)ND1)/(lattice1.nmesh_x*lattice1.nmesh_y*lattice1.nmesh_z);
+    const int max_nmesh = fmax(lattice1.nmesh_x, fmax(lattice1.nmesh_y, lattice1.nmesh_z));
     if((max_nmesh <= BOOST_CELL_THRESH || avg_np >= BOOST_NUMPART_THRESH)
        && max_nmesh < options->max_cells_per_dim) {
         if(options->verbose) {
-            fprintf(stderr,"%s> gridlink seems inefficient. nmesh = (%d, %d, %d); avg_np = %.3g. ", __FUNCTION__, nmesh_x, nmesh_y, nmesh_z, avg_np);
+            fprintf(stderr,"%s> gridlink seems inefficient. nmesh = (%d, %d, %d); avg_np = %.3g. ", __FUNCTION__, lattice1.nmesh_x, lattice1.nmesh_y, lattice1.nmesh_z, avg_np);
         }
         if(get_bin_refine_scheme(options) == BINNING_DFL) {
             if(options->verbose) {
                 fprintf(stderr,"Boosting bin refine factor - should lead to better performance\n");
                 fprintf(stderr,"xmin = %lf xmax=%lf rmax = %lf\n", xmin, xmax, rmax);
             }
-            free_cellarray(lattice1);
+            free_cellarray(&lattice1);
             // Only boost the first two dimensions.  Prevents excessive refinement.
             for(int i=0;i<2;i++) {
                 options->bin_refine_factors[i] += BOOST_BIN_REF;
             }
-            lattice1 = gridlink(ND1, X1, Y1, Z1, &(options->weights0),
-                                       xmin, xmax, ymin, ymax, zmin, zmax,
-                                       rmax, rmax, rmax,
-                                       xwrap, ywrap, zwrap,
-                                       options->bin_refine_factors[0], options->bin_refine_factors[1], options->bin_refine_factors[2],
-                                       sort_on_z,
-                                       &nmesh_x, &nmesh_y, &nmesh_z, options);
-            if(lattice1 == NULL) {
+            gstatus = gridlink(
+                &lattice1,
+                ND1, X1, Y1, Z1, W1,
+                xmin, xmax, ymin, ymax, zmin, zmax,
+                rmax, rmax, rmax,
+                xwrap, ywrap, zwrap,
+                options->bin_refine_factors[0], options->bin_refine_factors[1], options->bin_refine_factors[2],
+                sort_on_z,
+                options);
+            if(gstatus != EXIT_SUCCESS) {
+                free_cellarray(&lattice1);
                 return EXIT_FAILURE;
             }
         } else {
@@ -228,99 +242,117 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
         }
     }
 
-    cellarray *lattice2 = NULL;
+    cellarray lattice2 = {0};
     if(options->autocorr==0) {
-        int ngrid2_x=0,ngrid2_y=0,ngrid2_z=0;
-        lattice2 = gridlink(ND2, X2, Y2, Z2, &(options->weights1),
+        gstatus = gridlink(&lattice2, ND2, X2, Y2, Z2, W2,
                                    xmin, xmax, ymin, ymax, zmin, zmax,
                                    rmax, rmax, rmax,
                                    xwrap, ywrap, zwrap,
                                    options->bin_refine_factors[0], options->bin_refine_factors[1], options->bin_refine_factors[2],
                                    sort_on_z,
-                                   &ngrid2_x, &ngrid2_y, &ngrid2_z, options);
-        if(lattice2 == NULL) {
-            free_cellarray(lattice1);
+                                   options);
+        if(gstatus != EXIT_SUCCESS) {
+            free_cellarray(&lattice1);
+            free_cellarray(&lattice2);
             return EXIT_FAILURE;
         }
-        if( ! (nmesh_x == ngrid2_x && nmesh_y == ngrid2_y && nmesh_z == ngrid2_z) ) {
+        if( ! (lattice1.nmesh_x == lattice2.nmesh_x && lattice1.nmesh_y == lattice2.nmesh_y && lattice1.nmesh_z == lattice2.nmesh_z) ) {
             fprintf(stderr,"Error: The two sets of 3-D lattices do not have identical bins. First has dims (%d, %d, %d) while second has (%d, %d, %d)\n",
-                    nmesh_x, nmesh_y, nmesh_z, ngrid2_x, ngrid2_y, ngrid2_z);
-            free_cellarray(lattice1);
-            free_cellarray(lattice2);
+                    lattice1.nmesh_x, lattice1.nmesh_y, lattice1.nmesh_z, lattice2.nmesh_x, lattice2.nmesh_y, lattice2.nmesh_z);
+            free_cellarray(&lattice1);
+            free_cellarray(&lattice2);
             return EXIT_FAILURE;
         }
     } else {
         lattice2 = lattice1;
     }
-    const int64_t totncells = (int64_t) nmesh_x * (int64_t) nmesh_y * (int64_t) nmesh_z;
 
+    // Generate the cell pairs
     int64_t num_cell_pairs = 0;
-    struct cell_pair *all_cell_pairs = generate_cell_pairs(lattice1, lattice2, totncells,
-                                                                         &num_cell_pairs,
-                                                                         options->bin_refine_factors[0],
-                                                                         options->bin_refine_factors[1],
-                                                                         options->bin_refine_factors[2],
-                                                                         nmesh_x, nmesh_y, nmesh_z,
-                                                                         xwrap, ywrap, zwrap,
-                                                                         rmax, -1.0, -1.0, /*max_3D_sep, max_2D_sep, max_1D_sep*/
-                                                                         options->enable_min_sep_opt,
-                                                                         options->autocorr,
-                                                                         periodic_x, periodic_y, periodic_z);
+    struct cell_pair *all_cell_pairs = generate_cell_pairs(
+        &num_cell_pairs,
+        &lattice1, &lattice2,
+        options->bin_refine_factors[0],
+        options->bin_refine_factors[1],
+        options->bin_refine_factors[2],
+        xwrap, ywrap, zwrap,
+        rmax, -1.0, -1.0, /*max_3D_sep, max_2D_sep, max_1D_sep*/
+        options->enable_min_sep_opt,
+        options->autocorr,
+        periodic_x, periodic_y, periodic_z
+    );
     if(all_cell_pairs == NULL) {
-        free_cellarray(lattice1);
+        free_cellarray(&lattice1);
         if(options->autocorr == 0) {
-            free_cellarray(lattice2);
+            free_cellarray(&lattice2);
         }
         return EXIT_FAILURE;
     }
 
+    // Initialize the pair counters
     for (int i = 0; i < N_bin_edges - 1; i++) {
         npairs[i] = 0;
         if (options->need_avg_sep) {
             rpavg[i] = 0.0; 
         }
-        if (need_weighted_pairs) {
-            weighted_pairs[i] = 0.0;
+        if (need_wavg) {
+            wavg[i] = 0.0;
         }
     }
 
-    DOUBLE bin_edges_sqr[N_bin_edges];
-    for(int i=0; i < N_bin_edges;i++) {
-        bin_edges_sqr[i] = bin_edges[i]*bin_edges[i];
-    }
-
-    DOUBLE sqr_rmax=bin_edges_sqr[N_bin_edges-1];
-    DOUBLE sqr_rmin=bin_edges_sqr[0];
-
+    // Initialize the progress bar
     int64_t numdone=0;
     if(options->verbose) {
         init_my_progressbar(num_cell_pairs);
     }
-    /*---Loop-over-Data1-particles--------------------*/
 
-    // The array reductions in this loop use the stack.
-    // This is what we were already doing, but theoretically we could run out of space.
-    // This is more likely to bite us with 2D estimators like DDrppi.
+    uint64_t *local_npairs[options->numthreads];
+    DOUBLE *local_rpavg[options->numthreads];
+    DOUBLE *local_wavg[options->numthreads];
 
-    // These are strictly used to toggle the reduction clauses on/off
-    int N_rpavg = options->need_avg_sep ? N_bin_edges - 1 : 0;
-    int N_wpairs = need_weighted_pairs ? N_bin_edges - 1 : 0;
+#ifdef _OPENMP
+    #pragma omp parallel num_threads(options->numthreads)
+    {
+        const int tid = omp_get_thread_num();
+        local_npairs[tid] = (uint64_t *) my_malloc(sizeof(uint64_t), N_bin_edges - 1);
+        memset(local_npairs[tid], 0, sizeof(uint64_t) * (N_bin_edges - 1));
 
+        local_rpavg[tid] = options->need_avg_sep ? 
+            (DOUBLE *) my_malloc(sizeof(DOUBLE), N_bin_edges - 1) :
+            NULL;
+        if (local_rpavg[tid] != NULL) {
+            memset(local_rpavg[tid], 0, sizeof(DOUBLE) * (N_bin_edges - 1));
+        }
+
+        local_wavg[tid] = need_wavg ? 
+            (DOUBLE *) my_malloc(sizeof(DOUBLE), N_bin_edges - 1) :
+            NULL;
+        if (local_wavg[tid] != NULL) {
+            memset(local_wavg[tid], 0, sizeof(DOUBLE) * (N_bin_edges - 1));
+        }
+    }
+#else
+    int tid = 0;
+    local_npairs[tid] = npairs;
+    local_rpavg[tid] = options->need_avg_sep ? rpavg : NULL;
+    local_wavg[tid] = need_wavg ? wavg : NULL;
+#endif
+
+    // For Ctrl-C handling
     int interrupted = 0;
 
 #ifdef _OPENMP
     #pragma omp parallel for \
         schedule(dynamic) \
         shared(numdone, interrupted) \
-        num_threads(options->numthreads) \
-        reduction(+:npairs[:N_bin_edges-1]) \
-        reduction(+:rpavg[:N_rpavg]) \
-        reduction(+:weighted_pairs[:N_wpairs])
+        num_threads(options->numthreads)
 #endif
     for(int64_t icellpair=0;icellpair<num_cell_pairs;icellpair++) {
+        const int tid = omp_get_thread_num();
+
         if(interrupted) continue;
         if(options->verbose) {
-            if (omp_get_thread_num() == 0){
+            if (tid == 0){
                 my_progressbar(numdone);
             }
 #ifdef _OPENMP
@@ -329,59 +361,85 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
             numdone++;
         }
 
-        if(omp_get_thread_num() == 0){
+        if(tid == 0){
             if(PyErr_CheckSignals()){
                 interrupted = 1;
+                continue;
             }
         }
 
         struct cell_pair *this_cell_pair = &all_cell_pairs[icellpair];
-        DOUBLE *this_rpavg = options->need_avg_sep ? rpavg:NULL;
-        DOUBLE *this_weighted_pairs = need_weighted_pairs ? weighted_pairs:NULL;
+
+        uint64_t *this_npairs = local_npairs[tid];
+        DOUBLE *this_rpavg = local_rpavg[tid];
+        DOUBLE *this_wavg = local_wavg[tid];
 
         const int64_t icell = this_cell_pair->cellindex1;
         const int64_t icell2 = this_cell_pair->cellindex2;
-        const cellarray *first = &lattice1[icell];
-        const cellarray *second = &lattice2[icell2];
+
+        int64_t first_N = lattice1.offsets[icell+1] - lattice1.offsets[icell];
+        int64_t second_N = lattice2.offsets[icell2+1] - lattice2.offsets[icell2];
+
+        int64_t i = lattice1.offsets[icell];
+        int64_t j = lattice2.offsets[icell2];
 
         countpairs_function(
-            first->nelements, first->x, first->y, first->z, &(first->weights),
-            second->nelements, second->x, second->y, second->z, &(second->weights),
+            this_npairs, this_rpavg, this_wavg,
+            first_N, lattice1.X + i, lattice1.Y + i, lattice1.Z + i, lattice1.W + i,
+            second_N, lattice2.X + j, lattice2.Y + j, lattice2.Z + j, lattice2.W + j,
             this_cell_pair->same_cell,
-            sqr_rmax, sqr_rmin, N_bin_edges, bin_edges_sqr, pimax, //pimax is simply rmax cast to DOUBLE
+            sqr_rmax, sqr_rmin, N_bin_edges, bin_edges_sqr, rmax,
             this_cell_pair->xwrap, this_cell_pair->ywrap, this_cell_pair->zwrap,
             this_cell_pair->min_dx, this_cell_pair->min_dy, this_cell_pair->min_dz,
             this_cell_pair->closest_x1, this_cell_pair->closest_y1, this_cell_pair->closest_z1,
-            this_rpavg, npairs,
-            this_weighted_pairs, options->weight_method
+            options->weight_method
         );
     }  // num_cell_pairs loop
 
     free(all_cell_pairs);
-    free_cellarray(lattice1);
+    free_cellarray(&lattice1);
     if(options->autocorr == 0) {
-        free_cellarray(lattice2);
+        free_cellarray(&lattice2);
     }
 
     if(interrupted){
-        raise_python_error();
+        raise_python_exception();
         return EXIT_FAILURE;  // never reached
     }
 
-    if(options->copy_particles == 0) {
-        int64_t *original_index = lattice1[0].original_index;
-        int status = restore_particle_order(ND1, original_index, X1, Y1, Z1, &(options->weights0));
-        if(status != EXIT_SUCCESS) {
-            return status;
-        }
-        if(options->autocorr == 0) {
-            original_index = lattice2[0].original_index;
-            status = restore_particle_order(ND2, original_index, X2, Y2, Z2, &(options->weights1));
-            if(status != EXIT_SUCCESS) {
-                return status;
+#ifdef _OPENMP
+    // Only reduce for OpenMP. Without it, the local_npairs are the same as npairs.
+
+    // We can *almost* use OpenMP's reduction clause instead of doing the following, but
+    // (1) there's not an elegant way to toggle the ravg and wavg reductions on and off;
+    // (2) there's no way to parallelize the reductions (only relevant for big N_bin_edges);
+    // (3) reductions live on the stack, and I'm not sure we want to rely on that for large arrays.
+
+    #pragma omp parallel num_threads(options->numthreads)
+    {
+        #pragma omp for schedule(static,CACHELINE/sizeof(int64_t))
+        for(int j=0;j<N_bin_edges - 1;j++) {
+            for(int i=0;i<options->numthreads;i++) {
+                npairs[j] += local_npairs[i][j];
+                if(options->need_avg_sep) {
+                    rpavg[j] += local_rpavg[i][j];
+                }
+                if(need_wavg) {
+                    wavg[j] += local_wavg[i][j];
+                }
             }
         }
+
+        const int tid = omp_get_thread_num();
+        free(local_npairs[tid]);
+        if(options->need_avg_sep) {
+            free(local_rpavg[tid]);
+        }
+        if(need_wavg) {
+            free(local_wavg[tid]);
+        }
     }
+#endif
 
     if(options->verbose) {
         finish_myprogressbar();
@@ -395,8 +453,8 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
             if(options->need_avg_sep) {
                 rpavg[i] *= (DOUBLE) 2.0;
             }
-            if(need_weighted_pairs) {
-                weighted_pairs[i] *= (DOUBLE) 2.0;
+            if(need_wavg) {
+                wavg[i] *= (DOUBLE) 2.0;
             }
         }
 
@@ -409,21 +467,14 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
                produces the same result as the auto-correlation  */
             npairs[0] += ND1;
 
-            // Increasing npairs affects rpavg and weighted_pairs.
+            // Increasing npairs affects rpavg and wavg.
             // We don't need to add anything to rpavg; all the self-pairs have 0 separation!
             // The self-pairs have non-zero weight, though.  So, fix that here.
-            if(need_weighted_pairs){
+            if(need_wavg){
                 // Keep in mind this is an autocorrelation (i.e. only one particle set to consider)
                 weight_func_t weight_func = get_weight_func_by_method(options->weight_method);
-                pair_struct pair = {.num_weights = options->weights0.num_weights,
-                                           .dx.d=0., .dy.d=0., .dz.d=0.,  // always 0 separation
-                                           .parx.d=0., .pary.d=0., .parz.d=0.};
                 for(int64_t j = 0; j < ND1; j++){
-                    for(int w = 0; w < pair.num_weights; w++){
-                        pair.weights0[w].d = ((DOUBLE *) options->weights0.weights[w])[j];
-                        pair.weights1[w].d = ((DOUBLE *) options->weights0.weights[w])[j];
-                    }
-                    weighted_pairs[0] += weight_func(&pair);
+                    wavg[0] += weight_func(0., 0., 0., W1[j], W1[j]);
                 }
             }
         }
@@ -434,8 +485,8 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1,
             if(options->need_avg_sep) {
                 rpavg[i] /= (DOUBLE) npairs[i] ;
             }
-            if(need_weighted_pairs) {
-                weighted_pairs[i] /= (DOUBLE) npairs[i];
+            if(need_wavg) {
+                wavg[i] /= (DOUBLE) npairs[i];
             }
         }
     }    

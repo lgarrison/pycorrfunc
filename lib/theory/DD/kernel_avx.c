@@ -6,11 +6,11 @@
 #include "function_precision.h"
 #include "utils.h"
 
-#include "weight_functions.h"
+#include "weights.h"
 #include "kernelfuncs.h"
 
 
-#if defined(HAVE_AVX)
+#ifdef HAVE_AVX
 #include "avx_calls.h"
 
 #ifdef _MSC_VER
@@ -19,8 +19,8 @@ int avx_available(void) {
   return 1;
 }
 #else
-#include<immintrin.h>
-#include<cpuid.h>
+#include <immintrin.h>
+#include <cpuid.h>
 
 #ifdef __APPLE__
 /*
@@ -37,17 +37,17 @@ int avx_available(void) {
 #endif
 #endif
 
-int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, const weight_struct *weights0,
-                                                   const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, const weight_struct *weights1,
+int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, DOUBLE *w0,
+                                                   const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, DOUBLE *w1,
                                                    const int same_cell,
-                                                   const DOUBLE sqr_rpmax, const DOUBLE sqr_rpmin, const int nbin, const DOUBLE *rupp_sqr, const DOUBLE rpmax,
+                                                   const DOUBLE sqr_rmax, const DOUBLE sqr_rmin, const int nbin, const DOUBLE *rupp_sqr, const DOUBLE rmax,
                                                    const DOUBLE off_xwrap, const DOUBLE off_ywrap, const DOUBLE off_zwrap,
                                                    const DOUBLE min_xdiff, const DOUBLE min_ydiff, const DOUBLE min_zdiff,
                                                    const DOUBLE closest_icell_xpos, const DOUBLE closest_icell_ypos, const DOUBLE closest_icell_zpos,
-                                                   DOUBLE *src_rpavg, uint64_t *src_npairs,
+                                                   DOUBLE *src_ravg, uint64_t *src_npairs,
                                                    DOUBLE *src_weighted_pairs, const weight_method_t weight_method)
 {
-    const int32_t need_rpavg = src_rpavg != NULL;
+    const int32_t need_ravg = src_ravg != NULL;
     const int32_t need_weighted_pairs = src_weighted_pairs != NULL;
 
     uint64_t npairs[nbin];
@@ -60,14 +60,14 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
         m_rupp_sqr[i] = AVX_SET_FLOAT(rupp_sqr[i]);
     }
 
-    /* variables required for rpavg and weighted_pairs*/
+    /* variables required for ravg and weighted_pairs*/
     AVX_FLOATS m_kbin[nbin];
-    DOUBLE rpavg[nbin], weighted_pairs[nbin];
-    if(need_rpavg || need_weighted_pairs){
+    DOUBLE ravg[nbin], weighted_pairs[nbin];
+    if(need_ravg || need_weighted_pairs){
         for(int i=0;i<nbin;i++) {
             m_kbin[i] = AVX_SET_FLOAT((DOUBLE) i);
-            if(need_rpavg){
-                rpavg[i] = ZERO;
+            if(need_ravg){
+                ravg[i] = ZERO;
             }
             if(need_weighted_pairs){
                 weighted_pairs[i] = ZERO;
@@ -92,7 +92,7 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
     }
 
     const DOUBLE *zstart = z1, *zend = z1 + N1;
-    const DOUBLE max_all_dz = SQRT(rpmax*rpmax - min_xdiff*min_xdiff - min_ydiff*min_ydiff);
+    const DOUBLE max_all_dz = SQRT(rmax*rmax - min_xdiff*min_xdiff - min_ydiff*min_ydiff);
     for(int64_t i=0;i<N0;i++) {
         const DOUBLE xpos = *x0++ + off_xwrap;
         const DOUBLE ypos = *y0++ + off_ywrap;
@@ -128,10 +128,10 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
             const DOUBLE min_dy = min_ydiff > 0 ? min_ydiff + FABS(ypos - closest_icell_ypos):min_ydiff;
             const DOUBLE min_dz = min_zdiff > 0 ? (this_dz > 0 ? this_dz:min_zdiff + FABS(zpos - closest_icell_zpos)):min_zdiff;
             const DOUBLE sqr_min_sep_this_point = min_dx*min_dx + min_dy*min_dy + min_dz*min_dz;
-            if(sqr_min_sep_this_point >= sqr_rpmax) {
+            if(sqr_min_sep_this_point >= sqr_rmax) {
                 continue;
             }
-            max_dz = SQRT(sqr_rpmax - min_dx*min_dx - min_dy*min_dy);
+            max_dz = SQRT(sqr_rmax - min_dx*min_dx - min_dy*min_dy);
 
             // Now "fast forward" in the list of secondary particles to find the first one that satisfies the max_all_dz constraint
             // We don't consider the i particle's x,y information yet, because those aren't sorted
@@ -165,7 +165,7 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
             const AVX_FLOATS m_ypos    = AVX_SET_FLOAT(ypos);
             const AVX_FLOATS m_zpos    = AVX_SET_FLOAT(zpos);
 
-            union int8 union_rpbin;
+            union int8 union_rbin;
             union float8 union_mDperp;
             union float8_weights union_mweight;
 
@@ -183,8 +183,8 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
             }
 
             const AVX_FLOATS m_max_dz = AVX_SET_FLOAT(max_dz);
-            const AVX_FLOATS m_sqr_rpmax = m_rupp_sqr[nbin-1];
-            const AVX_FLOATS m_sqr_rpmin = m_rupp_sqr[0];
+            const AVX_FLOATS m_sqr_rmax = m_rupp_sqr[nbin-1];
+            const AVX_FLOATS m_sqr_rmin = m_rupp_sqr[0];
 
             const AVX_FLOATS m_xdiff = AVX_SUBTRACT_FLOATS(m_x1, m_xpos);  //(x[j] - x0)
             const AVX_FLOATS m_ydiff = AVX_SUBTRACT_FLOATS(m_y1, m_ypos);  //(y[j] - y0)
@@ -215,11 +215,11 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
                     j = N1;//but do not break yet, there might be valid pairs in this chunk
                 }
 
-                const AVX_FLOATS m_rpmax_mask = AVX_COMPARE_FLOATS(r2, m_sqr_rpmax, _CMP_LT_OS);
-                const AVX_FLOATS m_rpmin_mask = AVX_COMPARE_FLOATS(r2, m_sqr_rpmin, _CMP_GE_OS);
+                const AVX_FLOATS m_rmax_mask = AVX_COMPARE_FLOATS(r2, m_sqr_rmax, _CMP_LT_OS);
+                const AVX_FLOATS m_rmin_mask = AVX_COMPARE_FLOATS(r2, m_sqr_rmin, _CMP_GE_OS);
                 //Create a combined mask by bitwise and of m1 and m_mask_left.
-                //This gives us the mask for all sqr_rpmin <= r2 < sqr_rpmax
-                m_mask_left = AVX_BITWISE_AND(m_rpmax_mask,m_rpmin_mask);
+                //This gives us the mask for all sqr_rmin <= r2 < sqr_rmax
+                m_mask_left = AVX_BITWISE_AND(m_rmax_mask,m_rmin_mask);
 
                 //If no valid pairs, continue with the next iteration of j-loop
                 const int num_left = AVX_TEST_COMPARISON(m_mask_left);
@@ -229,8 +229,8 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
 
                 /* Check if all the possible pairs are in the last bin. But only run
                    this check if not evaluating same cell pairs or when simply counting
-                   the pairs (no rpavg requested)  */
-                if(same_cell == 0 && need_rpavg == 0 && need_weighted_pairs == 0) {
+                   the pairs (no ravg requested)  */
+                if(same_cell == 0 && need_ravg == 0 && need_weighted_pairs == 0) {
                     const AVX_FLOATS m_last_bin = AVX_BITWISE_AND(m_mask_left, AVX_COMPARE_FLOATS(r2, m_rupp_sqr[nbin-1], _CMP_GE_OS));
                     if(AVX_TEST_COMPARISON(m_last_bin) == num_left) { /* all the valid pairs are in the last bin */
                         npairs[nbin-1] += num_left;/* add the total number of pairs to the last bin and continue j-loop*/
@@ -238,26 +238,26 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
                     }
                 }
 
-                //There is some r2 that satisfies sqr_rpmin <= r2 < sqr_rpmax && 0.0 <= dz^2 < pimax^2.
-                r2 = AVX_BLEND_FLOATS_WITH_MASK(m_sqr_rpmax, r2, m_mask_left);
+                //There is some r2 that satisfies sqr_rmin <= r2 < sqr_rmax && 0.0 <= dz^2 < pimax^2.
+                r2 = AVX_BLEND_FLOATS_WITH_MASK(m_sqr_rmax, r2, m_mask_left);
             }
 
-            AVX_FLOATS m_rpbin = AVX_SETZERO_FLOAT();
-            if(need_rpavg) {
+            AVX_FLOATS m_rbin = AVX_SETZERO_FLOAT();
+            if(need_ravg) {
                 union_mDperp.m_Dperp = AVX_SQRT_FLOAT(r2);
             }
             if(need_weighted_pairs){
                 union_mweight.m_weights = avx_weight_func(&pair);
             }
 
-            //Loop backwards through nbins. m_mask_left contains all the points that are less than rpmax
+            //Loop backwards through nbins. m_mask_left contains all the points that are less than rmax
             for(int kbin=nbin-1;kbin>=1;kbin--) {
                 const AVX_FLOATS m1 = AVX_COMPARE_FLOATS(r2,m_rupp_sqr[kbin-1],_CMP_GE_OS);
                 const AVX_FLOATS m_bin_mask = AVX_BITWISE_AND(m1,m_mask_left);
                 const int test2  = AVX_TEST_COMPARISON(m_bin_mask);
                 npairs[kbin] += AVX_BIT_COUNT_INT(test2);
-                if(need_rpavg || need_weighted_pairs) {
-                    m_rpbin = AVX_BLEND_FLOATS_WITH_MASK(m_rpbin,m_kbin[kbin], m_bin_mask);
+                if(need_ravg || need_weighted_pairs) {
+                    m_rbin = AVX_BLEND_FLOATS_WITH_MASK(m_rbin,m_kbin[kbin], m_bin_mask);
                 }
                 m_mask_left = AVX_COMPARE_FLOATS(r2,m_rupp_sqr[kbin-1],_CMP_LT_OS);
                 const int test3 = AVX_TEST_COMPARISON(m_mask_left);
@@ -266,17 +266,17 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
                 }
             }
 
-            if(need_rpavg || need_weighted_pairs) {
-                union_rpbin.m_ibin = AVX_TRUNCATE_FLOAT_TO_INT(m_rpbin);
+            if(need_ravg || need_weighted_pairs) {
+                union_rbin.m_ibin = AVX_TRUNCATE_FLOAT_TO_INT(m_rbin);
                 //protect the unroll pragma in case compiler is not icc.
 #if  __INTEL_COMPILER
 #pragma unroll(AVX_NVEC)
 #endif
                 for(int jj=0;jj<AVX_NVEC;jj++) {
-                    const int kbin = union_rpbin.ibin[jj];
-                    if(need_rpavg){
+                    const int kbin = union_rbin.ibin[jj];
+                    if(need_ravg){
                         const DOUBLE r = union_mDperp.Dperp[jj];
-                        rpavg[kbin] += r;
+                        ravg[kbin] += r;
                     }
                     if(need_weighted_pairs){
                         const DOUBLE weight = union_mweight.weights[jj];
@@ -298,7 +298,7 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
             if(dz >= max_dz) break;
 
             const DOUBLE r2 = dx*dx + dy*dy + dz*dz;
-            if(r2 >= sqr_rpmax || r2 < sqr_rpmin) {
+            if(r2 >= sqr_rmax || r2 < sqr_rmin) {
                 continue;
             }
 
@@ -309,7 +309,7 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
             }
 
             DOUBLE r = ZERO, pairweight = ZERO;
-            if(need_rpavg) {
+            if(need_ravg) {
                 r = SQRT(r2);
             }
             if(need_weighted_pairs){
@@ -319,8 +319,8 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
             for(int kbin=nbin-1;kbin>=1;kbin--) {
                 if(r2 >= rupp_sqr[kbin-1]) {
                     npairs[kbin]++;
-                    if(need_rpavg) {
-                        rpavg[kbin] += r;
+                    if(need_ravg) {
+                        ravg[kbin] += r;
                     }
                     if(need_weighted_pairs){
                         weighted_pairs[kbin] += pairweight;
@@ -333,8 +333,8 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
 
 	for(int i=1;i<nbin;i++) {
 		src_npairs[i - 1] += npairs[i];
-        if(need_rpavg) {
-            src_rpavg[i - 1] += rpavg[i];
+        if(need_ravg) {
+            src_ravg[i - 1] += ravg[i];
         }
         if(need_weighted_pairs) {
             src_weighted_pairs[i - 1] += weighted_pairs[i];

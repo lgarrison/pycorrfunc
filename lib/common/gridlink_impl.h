@@ -1,12 +1,3 @@
-// # -*- mode: c -*-
-/* File: gridlink_impl.h.src */
-/*
-  This file is a part of the Corrfunc package
-  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
-  License: MIT LICENSE. See LICENSE file under the top-level
-  directory at https://github.com/manodeep/Corrfunc/
-*/
-
 #pragma once
 
 #include <stdint.h>
@@ -14,11 +5,11 @@
 #include "defs.h"
 #include "cellarray.h"
 #include "cell_pair.h"
-#include "weight_defs.h"
 
-cellarray * gridlink(
+int gridlink(
+    cellarray *lattice,
     const int64_t np,
-    DOUBLE *x, DOUBLE *y, DOUBLE *z, weight_struct *weights,
+    DOUBLE *x, DOUBLE *y, DOUBLE *z, DOUBLE *W,
     const DOUBLE xmin, const DOUBLE xmax,
     const DOUBLE ymin, const DOUBLE ymax,
     const DOUBLE zmin, const DOUBLE zmax,
@@ -32,18 +23,13 @@ cellarray * gridlink(
     const int ybin_refine_factor,
     const int zbin_refine_factor,
     const int sort_on_z,
-    int *nlattice_x,
-    int *nlattice_y,
-    int *nlattice_z,
     const config_options *options) __attribute__((warn_unused_result));
 
-struct cell_pair * generate_cell_pairs(
-    cellarray *lattice1,
-    cellarray *lattice2,
-    const int64_t totncells,
+struct cell_pair *generate_cell_pairs(
     int64_t *ncell_pairs,
+    const cellarray *lattice1,
+    const cellarray *lattice2,
     const int xbin_refine_factor, const int ybin_refine_factor, const int zbin_refine_factor,
-    const int nmesh_x, const int nmesh_y, const int nmesh_z,
     const DOUBLE xdiff, const DOUBLE ydiff, const DOUBLE zdiff,
     const DOUBLE max_3D_sep, const DOUBLE max_2D_sep, const DOUBLE max_1D_sep,
     const int enable_min_sep_opt,

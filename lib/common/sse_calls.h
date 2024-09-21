@@ -1,11 +1,3 @@
-/* File: sse_calls.h */
-/*
-  This file is a part of the Corrfunc package
-  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
-  License: MIT LICENSE. See LICENSE file under the top-level
-  directory at https://github.com/manodeep/Corrfunc/
-*/
-
 #pragma once
 
 #include <stdio.h>
@@ -21,7 +13,7 @@
 #endif
 
 
-#ifndef CORRFUNC_USE_DOUBLE
+#ifndef PYCORRFUNC_USE_DOUBLE
 
 #define SSE_NVEC                         4
 #define SSE_INTS                         __m128i

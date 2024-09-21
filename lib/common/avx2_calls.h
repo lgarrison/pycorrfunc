@@ -1,11 +1,3 @@
-/* File: avx2_calls.h */
-/*
-  This file is a part of the Corrfunc package
-  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
-  License: MIT LICENSE. See LICENSE file under the top-level
-  directory at https://github.com/manodeep/Corrfunc/
-*/
-
 #pragma once
 
 #include <stdio.h>
@@ -28,7 +20,7 @@
 #define AVX2_BIT_COUNT_UNSIGNED_INT(X)       _mm_popcnt_u32(X)
 #define AVX2_BIT_COUNT_UNSIGNED_LONG(X)      _mm_popcnt_u64(X)
 
-#ifndef CORRFUNC_USE_DOUBLE
+#ifndef PYCORRFUNC_USE_DOUBLE
 
 #define AVX2_NVEC                         8    
 #define AVX2_INTS                         __m256i
@@ -174,7 +166,7 @@
 #define AVX2_STREAMING_STORE_FLOATS(X,Y)   _mm256_stream_pd(X,Y)
 #define AVX2_STREAMING_STORE_INTS(X,Y)     _mm_stream_si128(X,Y)
 
-#endif //CORRFUNC_USE_DOUBLE
+#endif //PYCORRFUNC_USE_DOUBLE
 
   //include all the avx matters including the declarations of union_int8 etc
 #include "avx_calls.h"

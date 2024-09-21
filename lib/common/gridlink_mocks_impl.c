@@ -1,17 +1,7 @@
-// # -*- mode: c -*-
-/* File: gridlink_mocks.c */
-/*
-  This file is a part of the Corrfunc package
-  Copyright (C) 2015-- Manodeep Sinha (manodeep@gmail.com)
-  License: MIT LICENSE. See LICENSE file under the top-level
-  directory at https://github.com/manodeep/Corrfunc/
-*/
-
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 
-#include "sglib.h"
 #include "function_precision.h"
 #include "utils.h"
 
@@ -20,10 +10,6 @@
 
 #if defined(_OPENMP)
 #include <omp.h>
-#endif
-
-#ifndef MEMORY_INCREASE_FAC
-#define MEMORY_INCREASE_FAC   1.1
 #endif
 
 #ifndef CONVERT_3D_INDEX_TO_LINEAR
@@ -292,7 +278,7 @@ cellarray_mocks * gridlink_mocks(const int64_t NPART,
             fprintf(stderr, "Error: In %s> The array to track the indices of input particle positions "
                     "should be the same size as the indices themselves\n", __FUNCTION__);
             fprintf(stderr,"Perhaps check that these two variables are the same type\n");
-            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h.src' and \n");
+            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h' and \n");
             fprintf(stderr,"'original_indices' defined within function '%s' in file '%s'\n", __FUNCTION__, __FILE__);
             return NULL;
         }
@@ -784,7 +770,7 @@ cellarray_mocks * gridlink_mocks_theta_dec(const int64_t NPART,
             fprintf(stderr, "Error: In %s> The array to track the indices of input particle positions "
                     "should be the same size as the indices themselves\n", __FUNCTION__);
             fprintf(stderr,"Perhaps check that these two variables are the same type\n");
-            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h.src' and \n");
+            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h' and \n");
             fprintf(stderr,"'original_indices' defined within function '%s' in file '%s'\n", __FUNCTION__, __FILE__);
             return NULL;
         }
@@ -1366,7 +1352,7 @@ cellarray_mocks * gridlink_mocks_theta_ra_dec(const int64_t NPART,
             fprintf(stderr, "Error: In %s> The array to track the indices of input particle positions "
                     "should be the same size as the indices themselves\n", __FUNCTION__);
             fprintf(stderr,"Perhaps check that these two variables are the same type\n");
-            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h.src' and \n");
+            fprintf(stderr,"'original_index' within the 'cellarray', defined in 'cellarray.h' and \n");
             fprintf(stderr,"'original_indices' defined within function '%s' in file '%s'\n", __FUNCTION__, __FILE__);
             return NULL;
         }

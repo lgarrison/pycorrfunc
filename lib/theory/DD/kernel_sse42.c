@@ -6,7 +6,7 @@
 #include "function_precision.h"
 #include "utils.h"
 
-#include "weight_functions.h"
+#include "weights.h"
 #include "kernelfuncs.h"
 
 

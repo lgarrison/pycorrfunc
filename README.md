@@ -12,7 +12,7 @@ Based on the summer project of Peter McMaster, advised by Lehman Garrison.
 ## License
 pycorrfunc is [MIT licensed](LICENSE).
 
-Sources from Corrfunc are used under the Corrfunc's MIT license, which is reproduced here:
+Sources from Corrfunc are used under Corrfunc's MIT license, which is reproduced here:
 
 <details>
 <summary>Corrfunc license</summary>
