@@ -8,6 +8,7 @@
 
 #include "macros.h"
 #include "utils.h"
+#include "defs.h"
 
 #ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
 #include <mach/mach_time.h> /* mach_absolute_time -> really fast */
@@ -29,8 +30,10 @@ int my_snprintf(char *buffer,int len,const char *format, ...)
     nwritten=vsnprintf(buffer, (size_t) len, format, args );
     va_end(args);
     if (nwritten > len || nwritten < 0) {
-        fprintf(stderr,"ERROR: printing to string failed (wrote %d characters while only %d characters were allocated)\n",nwritten,len);
-        fprintf(stderr,"Increase `len'=%d in the header file\n",len);
+        sprintf(ERRMSG,
+            "ERROR: printing to string failed (wrote %d characters while only %d characters were allocated)\n"
+            "Increase `len'=%d in the header file\n",
+            nwritten, len, len);
         return -1;
     }
     return nwritten;
@@ -160,7 +163,7 @@ void* my_malloc(size_t size,int64_t N)
 {
     void *x = malloc(N*size);
     if (x==NULL){
-        fprintf(stderr,"malloc for %"PRId64" elements with %zu bytes failed...\n",N,size);
+        sprintf(ERRMSG,"malloc for %"PRId64" elements with %zu bytes failed...\n",N,size);
         perror(NULL);
     }
 
@@ -176,7 +179,7 @@ void* my_calloc(size_t size,int64_t N)
 {
     void *x = calloc((size_t) N, size);
     if (x==NULL)    {
-        fprintf(stderr,"malloc for %"PRId64" elements with %zu size failed...\n",N,size);
+        sprintf(ERRMSG,"malloc for %"PRId64" elements with %zu size failed...\n",N,size);
         perror(NULL);
     }
 

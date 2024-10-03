@@ -22,8 +22,8 @@ typedef struct {
     int have_weights;
 } cellarray;
 
-int allocate_cellarray(cellarray *lattice, const int nx, const int ny, const int nz, const int64_t np, const int with_weights);
+cellarray *allocate_cellarray(const int64_t np, const int nx, const int ny, const int nz, const int with_weights);
 
 int validate_cellarray(const cellarray *lattice);
 
-void free_cellarray(cellarray *lattice);
+void free_cellarray(cellarray **lattice);

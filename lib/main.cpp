@@ -1,6 +1,4 @@
-#include <array>
 #include <optional>
-#include <variant>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -8,10 +6,8 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
-#include <nanobind/stl/array.h>
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
-#include <nanobind/stl/variant.h>
 
 extern "C" {
     #include "theory/DD/countpairs.h"
@@ -32,17 +28,6 @@ using array_t = nb::ndarray<T, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
 template<typename T>
 using array2D_t = nb::ndarray<T, nb::ndim<2>, nb::c_contig, nb::device::cpu>;
 
-template<typename T>
-using tuple3 = std::array<T, 3>;
-
-// visitor helper type
-template<class... Ts>
-struct overloads : Ts... { using Ts::operator()...; };
-
-// deduction guide
-template<class... Ts>
-overloads(Ts...) -> overloads<Ts...>;
-
 void countpairs_wrapper(
     array_t<DOUBLE> X1,
     array_t<DOUBLE> Y1,
@@ -55,10 +40,10 @@ void countpairs_wrapper(
     array_t<const DOUBLE> bin_edges,
     array_t<uint64_t> npairs,
     array_t<DOUBLE> ravg,
-    array_t<DOUBLE> weighted_pairs,
+    array_t<DOUBLE> wavg,
     int num_threads,
-    std::optional<std::variant<DOUBLE, tuple3<DOUBLE>>> boxsize,
-    std::optional<std::string> weight_type,
+    std::optional<nb::ndarray<const DOUBLE, nb::ndim<1>, nb::device::cpu>> boxsize,
+    std::optional<const std::string> weight_method,
     bool verbose,
     int isa
     // bin_refine_factors
@@ -72,25 +57,19 @@ void countpairs_wrapper(
 #endif
     }
 
-    const char *weight_str = weight_type.has_value() ? weight_type->c_str() : NULL;
-    config_options options = get_config_options(weight_str);
+    const char *weight_str = weight_method.has_value() ? weight_method->c_str() : NULL;
+    config_options options;
+    if(get_config_options(&options, weight_str) != EXIT_SUCCESS) {
+        throw std::runtime_error(ERRMSG);
+    }
     options.numthreads = num_threads;
+
     if(boxsize.has_value()){
-        std::visit(
-            overloads{
-                [&options](const tuple3<DOUBLE> &t) {
-                    options.boxsize_x = t[0];
-                    options.boxsize_y = t[1];
-                    options.boxsize_z = t[2];
-                },
-                [&options](DOUBLE d) {
-                    options.boxsize_x = d;
-                    options.boxsize_y = d;
-                    options.boxsize_z = d;
-                }
-            },
-            boxsize.value()
-        );
+        auto b = boxsize.value().view();
+        options.boxsize_x = b(0);
+        options.boxsize_y = b(1);
+        options.boxsize_z = b(2);
+
     }
     options.autocorr = !X2.has_value();
     options.verbose = verbose;
@@ -116,13 +95,14 @@ void countpairs_wrapper(
         &options,
         npairs.data(),
         ravg.data(),
-        weighted_pairs.data()
+        wavg.data()
     );
 
     if(status != EXIT_SUCCESS) {
         // FUTURE if countpairs was using C++, we could easily raise more informative exceptions
-        // For now, errors will write their message to stderr, then we'll raise a generic exception
-        throw std::runtime_error("countpairs failed");
+        // with proper contextual/chained error messages.
+        // For now, we'll use the last message in the ERRMSG buffer.
+        throw std::runtime_error(ERRMSG);
     }
 }
 
@@ -141,10 +121,10 @@ NB_MODULE(NB_NAME, m) {
         "bin_edges"_a.noconvert(),
         "npairs"_a.noconvert(),
         "ravg"_a.noconvert(),
-        "weighted_pairs"_a.noconvert(),
+        "wavg"_a.noconvert(),
         "num_threads"_a.noconvert(),
         "boxsize"_a.noconvert().none(),
-        "weight_type"_a.noconvert().none(),
+        "weight_method"_a.noconvert().none(),
         "verbose"_a.noconvert(),
         "isa"_a.noconvert()
     );

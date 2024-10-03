@@ -6,10 +6,9 @@
 #include "cellarray.h"
 #include "cell_pair.h"
 
-int gridlink(
-    cellarray *lattice,
-    const int64_t np,
-    DOUBLE *x, DOUBLE *y, DOUBLE *z, DOUBLE *W,
+cellarray *gridlink(
+    const int64_t NPART,
+    DOUBLE * const X, DOUBLE * const Y, DOUBLE * const Z, DOUBLE * const W,
     const DOUBLE xmin, const DOUBLE xmax,
     const DOUBLE ymin, const DOUBLE ymax,
     const DOUBLE zmin, const DOUBLE zmax,
@@ -23,7 +22,8 @@ int gridlink(
     const int ybin_refine_factor,
     const int zbin_refine_factor,
     const int sort_on_z,
-    const config_options *options) __attribute__((warn_unused_result));
+    const config_options *options
+) __attribute__((warn_unused_result));
 
 struct cell_pair *generate_cell_pairs(
     int64_t *ncell_pairs,
@@ -37,4 +37,4 @@ struct cell_pair *generate_cell_pairs(
     const int periodic_x, const int periodic_y, const int periodic_z)
     __attribute__((warn_unused_result));
 
-void free_cellarray(cellarray *lattice);
+void free_cellarray(cellarray **lattice);

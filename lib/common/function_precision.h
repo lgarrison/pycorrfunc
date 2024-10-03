@@ -7,7 +7,6 @@
 #define PI_OVER_180       0.017453292519943295769236907684886127134428718885417254560971
 #define INV_PI_OVER_180   57.29577951308232087679815481410517033240547246656432154916024
 
-//Define the Macros
 #ifdef PYCORRFUNC_USE_DOUBLE
 #define COSD(X)            cos(X*PI_OVER_180)
 #define SIND(X)            sin(X*PI_OVER_180)
@@ -15,30 +14,6 @@
 #define COSD(X)            cosf(X*PI_OVER_180)
 #define SIND(X)            sinf(X*PI_OVER_180)
 #endif
-
-#ifdef HAVE_AVX
-    
-#define REGISTER_WIDTH 256  //cpu supports avx instructions
-#define NVECF  8  //8 floats per ymm register
-#define NVECD  4  //4 doubles per ymm register
-
-#else
-
-#ifdef HAVE_SSE42
-    
-#define REGISTER_WIDTH 128  //cpu supports sse instructions
-#define NVECF  4  //8 floats per xmm register
-#define NVECD  2  //4 doubles per xmm register
-
-#else
-
-#define REGISTER_WIDTH 64
-#define NVECF 2
-#define NVECD 1
-
-#endif//SSE
-#endif//AVX
-
 
 #include <float.h>
     

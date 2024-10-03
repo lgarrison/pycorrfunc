@@ -31,6 +31,8 @@
 int omp_get_thread_num(void) { return 0; }
 #endif
 
+char ERRMSG[1024];
+
 
 kernel_func_ptr countpairs_driver(const config_options *options) {
     // If options.isa == FASTEST, use the fastest where both:
@@ -47,39 +49,39 @@ kernel_func_ptr countpairs_driver(const config_options *options) {
         case AVX512F:
             #ifdef HAVE_AVX512F
             if (avx512_available()) {
-                function = countpairs_avx512_intrinsics;
+                function = countpairs_avx512;
                 if(options->verbose) fprintf(stderr, "Using AVX512F kernel\n");
                 break;
             }
             #endif
             if (err_if_not_avail) {
-                fprintf(stderr, "AVX512F not available\n");
+                sprintf(ERRMSG, "AVX512F not available\n");
                 return NULL;
             }
             // fallthrough
         case AVX:
             #ifdef HAVE_AVX
             if (avx_available()) {
-                function = countpairs_avx_intrinsics;
+                function = countpairs_avx;
                 if (options->verbose) fprintf(stderr, "Using AVX kernel\n");
                 break;
             }
             #endif
             if (err_if_not_avail) {
-                fprintf(stderr, "AVX not available\n");
+                sprintf(ERRMSG, "AVX not available\n");
                 return NULL;
             }
             // fallthrough
         case SSE42:
             #ifdef HAVE_SSE42
             if (sse_available()) {
-                function = countpairs_sse_intrinsics;
+                function = countpairs_sse;
                 if (options->verbose) fprintf(stderr, "Using SSE42 kernel\n");
                 break;
             }
             #endif
             if (err_if_not_avail) {
-                fprintf(stderr, "SSE42 not available\n");
+                sprintf(ERRMSG, "SSE42 not available\n");
                 return NULL;
             }
             // fallthrough
@@ -88,7 +90,7 @@ kernel_func_ptr countpairs_driver(const config_options *options) {
             if (options->verbose) fprintf(stderr, "Using fallback kernel\n");
             break;
         default:
-            fprintf(stderr, "Unknown ISA\n");
+            sprintf(ERRMSG, "Unknown ISA\n");
             return NULL;
     }
 
@@ -105,6 +107,7 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
 
     const int need_wavg = options->weight_method != NONE;
     const int sort_on_z = 1;
+    const int enable_min_sep_opt = 1;
 
     /* runtime dispatch - get the function pointer */
     kernel_func_ptr countpairs_function = countpairs_driver(options);
@@ -114,17 +117,12 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
     }
 
     // Setup the bin edges
-    // const DOUBLE rmin = bin_edges[0];
     const DOUBLE rmax = bin_edges[N_bin_edges - 1];
 
     DOUBLE bin_edges_sqr[N_bin_edges];
     for(int i=0; i < N_bin_edges;i++) {
         bin_edges_sqr[i] = bin_edges[i]*bin_edges[i];
     }
-
-    DOUBLE sqr_rmax=bin_edges_sqr[N_bin_edges-1];
-    DOUBLE sqr_rmin=bin_edges_sqr[0];
-
 
     // determine the periodicity request
     const int periodic_x = options->boxsize_x > 0;
@@ -182,9 +180,8 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
     }
 
     // Divide the particles into cells
-    cellarray lattice1 = {0};
-    int gstatus = gridlink(
-        &lattice1,
+    
+    cellarray *lattice1 = gridlink(
         ND1, X1, Y1, Z1, W1,
         xmin, xmax, ymin, ymax, zmin, zmax,
         rmax, rmax, rmax,
@@ -196,19 +193,18 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         options
         );
 
-    if(gstatus != EXIT_SUCCESS) {
-        free_cellarray(&lattice1);
+    if(lattice1 == NULL) {
         return EXIT_FAILURE;
     }
 
     /* If there too few cells (BOOST_CELL_THRESH is ~10), and the number of cells can be increased, then boost bin refine factor by ~1*/
     // TODO: don't regrid!! Compute these stats beforehand.
-    const double avg_np = ((double)ND1)/(lattice1.nmesh_x*lattice1.nmesh_y*lattice1.nmesh_z);
-    const int max_nmesh = fmax(lattice1.nmesh_x, fmax(lattice1.nmesh_y, lattice1.nmesh_z));
+    const double avg_np = ((double)ND1)/(lattice1->nmesh_x*lattice1->nmesh_y*lattice1->nmesh_z);
+    const int max_nmesh = fmax(lattice1->nmesh_x, fmax(lattice1->nmesh_y, lattice1->nmesh_z));
     if((max_nmesh <= BOOST_CELL_THRESH || avg_np >= BOOST_NUMPART_THRESH)
        && max_nmesh < options->max_cells_per_dim) {
         if(options->verbose) {
-            fprintf(stderr,"%s> gridlink seems inefficient. nmesh = (%d, %d, %d); avg_np = %.3g. ", __FUNCTION__, lattice1.nmesh_x, lattice1.nmesh_y, lattice1.nmesh_z, avg_np);
+            fprintf(stderr,"%s> gridlink seems inefficient. nmesh = (%d, %d, %d); avg_np = %.3g. ", __FUNCTION__, lattice1->nmesh_x, lattice1->nmesh_y, lattice1->nmesh_z, avg_np);
         }
         if(get_bin_refine_scheme(options) == BINNING_DFL) {
             if(options->verbose) {
@@ -220,8 +216,7 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
             for(int i=0;i<2;i++) {
                 options->bin_refine_factors[i] += BOOST_BIN_REF;
             }
-            gstatus = gridlink(
-                &lattice1,
+            lattice1 = gridlink(
                 ND1, X1, Y1, Z1, W1,
                 xmin, xmax, ymin, ymax, zmin, zmax,
                 rmax, rmax, rmax,
@@ -229,7 +224,7 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
                 options->bin_refine_factors[0], options->bin_refine_factors[1], options->bin_refine_factors[2],
                 sort_on_z,
                 options);
-            if(gstatus != EXIT_SUCCESS) {
+            if(lattice1 == NULL) {
                 free_cellarray(&lattice1);
                 return EXIT_FAILURE;
             }
@@ -242,23 +237,23 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         }
     }
 
-    cellarray lattice2 = {0};
+    cellarray *lattice2 = NULL;
     if(options->autocorr==0) {
-        gstatus = gridlink(&lattice2, ND2, X2, Y2, Z2, W2,
+        lattice2 = gridlink(ND2, X2, Y2, Z2, W2,
                                    xmin, xmax, ymin, ymax, zmin, zmax,
                                    rmax, rmax, rmax,
                                    xwrap, ywrap, zwrap,
                                    options->bin_refine_factors[0], options->bin_refine_factors[1], options->bin_refine_factors[2],
                                    sort_on_z,
                                    options);
-        if(gstatus != EXIT_SUCCESS) {
+        if(lattice2 == NULL) {
             free_cellarray(&lattice1);
             free_cellarray(&lattice2);
             return EXIT_FAILURE;
         }
-        if( ! (lattice1.nmesh_x == lattice2.nmesh_x && lattice1.nmesh_y == lattice2.nmesh_y && lattice1.nmesh_z == lattice2.nmesh_z) ) {
-            fprintf(stderr,"Error: The two sets of 3-D lattices do not have identical bins. First has dims (%d, %d, %d) while second has (%d, %d, %d)\n",
-                    lattice1.nmesh_x, lattice1.nmesh_y, lattice1.nmesh_z, lattice2.nmesh_x, lattice2.nmesh_y, lattice2.nmesh_z);
+        if( ! (lattice1->nmesh_x == lattice2->nmesh_x && lattice1->nmesh_y == lattice2->nmesh_y && lattice1->nmesh_z == lattice2->nmesh_z) ) {
+            sprintf(ERRMSG,"Error: The two sets of 3-D lattices do not have identical bins. First has dims (%d, %d, %d) while second has (%d, %d, %d)\n",
+                    lattice1->nmesh_x, lattice1->nmesh_y, lattice1->nmesh_z, lattice2->nmesh_x, lattice2->nmesh_y, lattice2->nmesh_z);
             free_cellarray(&lattice1);
             free_cellarray(&lattice2);
             return EXIT_FAILURE;
@@ -271,13 +266,13 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
     int64_t num_cell_pairs = 0;
     struct cell_pair *all_cell_pairs = generate_cell_pairs(
         &num_cell_pairs,
-        &lattice1, &lattice2,
+        lattice1, lattice2,
         options->bin_refine_factors[0],
         options->bin_refine_factors[1],
         options->bin_refine_factors[2],
         xwrap, ywrap, zwrap,
         rmax, -1.0, -1.0, /*max_3D_sep, max_2D_sep, max_1D_sep*/
-        options->enable_min_sep_opt,
+        enable_min_sep_opt,
         options->autocorr,
         periodic_x, periodic_y, periodic_z
     );
@@ -377,18 +372,18 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         const int64_t icell = this_cell_pair->cellindex1;
         const int64_t icell2 = this_cell_pair->cellindex2;
 
-        int64_t first_N = lattice1.offsets[icell+1] - lattice1.offsets[icell];
-        int64_t second_N = lattice2.offsets[icell2+1] - lattice2.offsets[icell2];
+        int64_t first_N = lattice1->offsets[icell+1] - lattice1->offsets[icell];
+        int64_t second_N = lattice2->offsets[icell2+1] - lattice2->offsets[icell2];
 
-        int64_t i = lattice1.offsets[icell];
-        int64_t j = lattice2.offsets[icell2];
+        int64_t i = lattice1->offsets[icell];
+        int64_t j = lattice2->offsets[icell2];
 
         countpairs_function(
             this_npairs, this_rpavg, this_wavg,
-            first_N, lattice1.X + i, lattice1.Y + i, lattice1.Z + i, lattice1.W + i,
-            second_N, lattice2.X + j, lattice2.Y + j, lattice2.Z + j, lattice2.W + j,
+            first_N, lattice1->X + i, lattice1->Y + i, lattice1->Z + i, lattice1->W + i,
+            second_N, lattice2->X + j, lattice2->Y + j, lattice2->Z + j, lattice2->W + j,
             this_cell_pair->same_cell,
-            sqr_rmax, sqr_rmin, N_bin_edges, bin_edges_sqr, rmax,
+            N_bin_edges, bin_edges_sqr,
             this_cell_pair->xwrap, this_cell_pair->ywrap, this_cell_pair->zwrap,
             this_cell_pair->min_dx, this_cell_pair->min_dy, this_cell_pair->min_dz,
             this_cell_pair->closest_x1, this_cell_pair->closest_y1, this_cell_pair->closest_z1,

@@ -11,11 +11,11 @@
 
 
 int countpairs_fallback(
-    uint64_t *restrict src_npairs, DOUBLE *restrict src_ravg, DOUBLE *restrict src_weighted_pairs,
+    uint64_t *restrict src_npairs, DOUBLE *restrict src_ravg, DOUBLE *restrict src_wavg,
     const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, DOUBLE *w0,
     const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, DOUBLE *w1,
     const int same_cell,
-    const DOUBLE sqr_rmax, const DOUBLE sqr_rmin, const int nbinedge, const DOUBLE *rupp_sqr, const DOUBLE rmax,
+    const int nbinedge, const DOUBLE *bin_edges_sqr,
     const DOUBLE off_xwrap, const DOUBLE off_ywrap, const DOUBLE off_zwrap,
     const DOUBLE min_xdiff, const DOUBLE min_ydiff, const DOUBLE min_zdiff,
     const DOUBLE closest_icell_xpos, const DOUBLE closest_icell_ypos, const DOUBLE closest_icell_zpos,
@@ -23,9 +23,11 @@ int countpairs_fallback(
 {
 
     weight_func_t weight_func = get_weight_func_by_method(weight_method);
+    const DOUBLE sqr_rmin = bin_edges_sqr[0];
+    const DOUBLE sqr_rmax = bin_edges_sqr[nbinedge-1];
 
     const DOUBLE *zstart = z1, *zend = z1 + N1;
-    const DOUBLE max_all_dz = SQRT(rmax*rmax - min_xdiff*min_xdiff - min_ydiff*min_ydiff);
+    const DOUBLE max_all_dz = SQRT(sqr_rmax - min_xdiff*min_xdiff - min_ydiff*min_ydiff);
     for(int64_t i=0;i<N0;i++) {
         const DOUBLE xpos = *x0++ + off_xwrap;
         const DOUBLE ypos = *y0++ + off_ywrap;
@@ -33,7 +35,6 @@ int countpairs_fallback(
         DOUBLE wi = 0.;
         if(weight_method != NONE) wi = *w0++;
 
-            
         DOUBLE max_dz = max_all_dz;
 
         /* Now consider if this i'th particle can be a valid pair with ANY of the remaining
@@ -108,21 +109,20 @@ int countpairs_fallback(
             if(weight_method != NONE) pairweight = weight_func(dx, dy, dz, wi, wj);
 
             for(int kbin=nbinedge-2;kbin>=0;kbin--){
-                if(r2 >= rupp_sqr[kbin]) {
+                if(r2 >= bin_edges_sqr[kbin]) {
                     src_npairs[kbin]++;
                     
                     if(src_ravg != NULL) {
                         src_ravg[kbin] += SQRT(r2);
                     }
                     if(weight_method != NONE){
-                        src_weighted_pairs[kbin] += pairweight;
+                        src_wavg[kbin] += pairweight;
                     }
                     break;
                 }
             }  // kbin loop
-        }
-    }
+        }  // j loop
+    }  // i loop
 
-    /*----------------- FALLBACK CODE --------------------*/
     return EXIT_SUCCESS;
 }

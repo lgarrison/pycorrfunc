@@ -13,12 +13,6 @@
 #ifdef HAVE_AVX
 #include "avx_calls.h"
 
-#ifdef _MSC_VER
-#include<intrin.h>
-int avx_available(void) {
-  return 1;
-}
-#else
 #include <immintrin.h>
 #include <cpuid.h>
 
@@ -35,74 +29,64 @@ int avx_available(void) {
     return __builtin_cpu_supports("avx");
 }
 #endif
-#endif
 
-int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, DOUBLE *w0,
-                                                   const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, DOUBLE *w1,
-                                                   const int same_cell,
-                                                   const DOUBLE sqr_rmax, const DOUBLE sqr_rmin, const int nbin, const DOUBLE *rupp_sqr, const DOUBLE rmax,
-                                                   const DOUBLE off_xwrap, const DOUBLE off_ywrap, const DOUBLE off_zwrap,
-                                                   const DOUBLE min_xdiff, const DOUBLE min_ydiff, const DOUBLE min_zdiff,
-                                                   const DOUBLE closest_icell_xpos, const DOUBLE closest_icell_ypos, const DOUBLE closest_icell_zpos,
-                                                   DOUBLE *src_ravg, uint64_t *src_npairs,
-                                                   DOUBLE *src_weighted_pairs, const weight_method_t weight_method)
+static inline AVX_FLOATS avx_pair_product(AVX_FLOATS, AVX_FLOATS, AVX_FLOATS, AVX_FLOATS w0, AVX_FLOATS w1){
+    return AVX_MULTIPLY_FLOATS(w0, w1);
+}
+
+typedef AVX_FLOATS (*avx_weight_func_t)(AVX_FLOATS dx, AVX_FLOATS dy, AVX_FLOATS dz, AVX_FLOATS w0, AVX_FLOATS w1);
+avx_weight_func_t get_avx_weight_func_by_method(const weight_method_t method){
+    switch(method){
+        case PAIR_PRODUCT:
+            return &avx_pair_product;
+        default:
+        case NONE:
+            return NULL;
+    }
+}
+
+int countpairs_avx(
+    uint64_t *restrict src_npairs, DOUBLE *restrict src_ravg, DOUBLE *restrict src_wavg,
+    const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, DOUBLE *w0,
+    const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, DOUBLE *w1,
+    const int same_cell,
+    const int nbinedge, const DOUBLE *bin_edges_sqr,
+    const DOUBLE off_xwrap, const DOUBLE off_ywrap, const DOUBLE off_zwrap,
+    const DOUBLE min_xdiff, const DOUBLE min_ydiff, const DOUBLE min_zdiff,
+    const DOUBLE closest_icell_xpos, const DOUBLE closest_icell_ypos, const DOUBLE closest_icell_zpos,
+    const weight_method_t weight_method)
 {
+    avx_weight_func_t avx_weight_func = get_avx_weight_func_by_method(weight_method);
+    weight_func_t fallback_weight_func = get_weight_func_by_method(weight_method);
+    
+    const DOUBLE sqr_rmin = bin_edges_sqr[0];
+    const DOUBLE sqr_rmax = bin_edges_sqr[nbinedge-1];
+
     const int32_t need_ravg = src_ravg != NULL;
-    const int32_t need_weighted_pairs = src_weighted_pairs != NULL;
+    const int32_t need_wavg = src_wavg != NULL;
 
-    uint64_t npairs[nbin];
-    for(int i=0;i<nbin;i++) {
-        npairs[i] = 0;
+    AVX_FLOATS m_edge_sqr[nbinedge];
+    for(int i=0;i<nbinedge;i++) {
+        m_edge_sqr[i] = AVX_SET_FLOAT(bin_edges_sqr[i]);
     }
 
-    AVX_FLOATS m_rupp_sqr[nbin];
-    for(int i=0;i<nbin;i++) {
-        m_rupp_sqr[i] = AVX_SET_FLOAT(rupp_sqr[i]);
-    }
-
-    /* variables required for ravg and weighted_pairs*/
-    AVX_FLOATS m_kbin[nbin];
-    DOUBLE ravg[nbin], weighted_pairs[nbin];
-    if(need_ravg || need_weighted_pairs){
-        for(int i=0;i<nbin;i++) {
-            m_kbin[i] = AVX_SET_FLOAT((DOUBLE) i);
-            if(need_ravg){
-                ravg[i] = ZERO;
-            }
-            if(need_weighted_pairs){
-                weighted_pairs[i] = ZERO;
-            }
+    /* variables required for ravg and wavg*/
+    AVX_FLOATS m_kbin[nbinedge];
+    if(need_ravg || need_wavg){
+        for(int i=0;i<nbinedge;i++) {
+            m_kbin[i] = AVX_SET_FLOAT((DOUBLE) i + 1);
         }
     }
 
-    // A copy whose pointers we can advance
-    weight_struct local_w0 = {.weights={NULL}, .num_weights=0}, local_w1 = {.weights={NULL}, .num_weights=0};
-    pair_struct pair = {.num_weights=0};
-    avx_weight_func_t avx_weight_func = NULL;
-    weight_func_t fallback_weight_func = NULL;
-    if(need_weighted_pairs){
-        // Same particle list, new copy of num_weights pointers into that list
-        local_w0 = *weights0;
-        local_w1 = *weights1;
-
-        pair.num_weights = local_w0.num_weights;
-
-        avx_weight_func = get_avx_weight_func_by_method(weight_method);
-        fallback_weight_func = get_weight_func_by_method(weight_method);
-    }
-
     const DOUBLE *zstart = z1, *zend = z1 + N1;
-    const DOUBLE max_all_dz = SQRT(rmax*rmax - min_xdiff*min_xdiff - min_ydiff*min_ydiff);
+    const DOUBLE max_all_dz = SQRT(sqr_rmax - min_xdiff*min_xdiff - min_ydiff*min_ydiff);
     for(int64_t i=0;i<N0;i++) {
         const DOUBLE xpos = *x0++ + off_xwrap;
         const DOUBLE ypos = *y0++ + off_ywrap;
         const DOUBLE zpos = *z0++ + off_zwrap;
-        for(int w = 0; w < pair.num_weights; w++){
-            // local_w0.weights[w] is a pointer to a float in the particle list of weights,
-            // just as x0 is a pointer into the list of x-positions.
-            // The advancement of the local_w0.weights[w] pointer should always mirror x0.
-            pair.weights0[w].a = AVX_SET_FLOAT(*(local_w0.weights[w])++);
-        }
+        DOUBLE wi = 0.;
+        if(weight_method != NONE) wi = *w0++;
+        
         DOUBLE max_dz = max_all_dz;
 
         /* Now consider if this i'th particle can be a valid pair with ANY of the remaining
@@ -156,14 +140,16 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
         int64_t j = localz1 - zstart;
         DOUBLE *localx1 = x1 + j;
         DOUBLE *localy1 = y1 + j;
-        for(int w = 0; w < local_w1.num_weights; w++){
-            local_w1.weights[w] = weights1->weights[w] + j;
+        DOUBLE *localw1 = NULL;
+        if(need_wavg){
+            localw1 = w1 + j;
         }
 
         for(;j<=(N1 - AVX_NVEC);j+=AVX_NVEC) {
             const AVX_FLOATS m_xpos    = AVX_SET_FLOAT(xpos);
             const AVX_FLOATS m_ypos    = AVX_SET_FLOAT(ypos);
             const AVX_FLOATS m_zpos    = AVX_SET_FLOAT(zpos);
+            const AVX_FLOATS m_wi = AVX_SET_FLOAT(wi);
 
             union int8 union_rbin;
             union float8 union_mDperp;
@@ -172,29 +158,21 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
             const AVX_FLOATS m_x1 = AVX_LOAD_FLOATS_UNALIGNED(localx1);
             const AVX_FLOATS m_y1 = AVX_LOAD_FLOATS_UNALIGNED(localy1);
             const AVX_FLOATS m_z1 = AVX_LOAD_FLOATS_UNALIGNED(localz1);
+            AVX_FLOATS m_wj = AVX_SETZERO_FLOAT();
+            if(weight_method != NONE) m_wj = AVX_LOAD_FLOATS_UNALIGNED(localw1);
 
             localx1 += AVX_NVEC;//this might actually exceed the allocated range but we will never dereference that
             localy1 += AVX_NVEC;
             localz1 += AVX_NVEC;
-
-            for(int w = 0; w < pair.num_weights; w++){
-                pair.weights1[w].a = AVX_LOAD_FLOATS_UNALIGNED(local_w1.weights[w]);
-                local_w1.weights[w] += AVX_NVEC;
-            }
+            if(weight_method != NONE) localw1 += AVX_NVEC;
 
             const AVX_FLOATS m_max_dz = AVX_SET_FLOAT(max_dz);
-            const AVX_FLOATS m_sqr_rmax = m_rupp_sqr[nbin-1];
-            const AVX_FLOATS m_sqr_rmin = m_rupp_sqr[0];
+            const AVX_FLOATS m_sqr_rmax = m_edge_sqr[nbinedge-1];
+            const AVX_FLOATS m_sqr_rmin = m_edge_sqr[0];
 
             const AVX_FLOATS m_xdiff = AVX_SUBTRACT_FLOATS(m_x1, m_xpos);  //(x[j] - x0)
             const AVX_FLOATS m_ydiff = AVX_SUBTRACT_FLOATS(m_y1, m_ypos);  //(y[j] - y0)
             const AVX_FLOATS m_zdiff = AVX_SUBTRACT_FLOATS(m_z1, m_zpos);  //z2[j:j+NVEC-1] - z1
-
-            if(need_weighted_pairs){
-                pair.dx.a = m_xdiff;
-                pair.dy.a = m_ydiff;
-                pair.dz.a = m_zdiff;
-            }
 
             const AVX_FLOATS m_sqr_xdiff = AVX_SQUARE_FLOAT(m_xdiff);  //(x0 - x[j])^2
             const AVX_FLOATS m_sqr_ydiff = AVX_SQUARE_FLOAT(m_ydiff);  //(y0 - y[j])^2
@@ -230,10 +208,10 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
                 /* Check if all the possible pairs are in the last bin. But only run
                    this check if not evaluating same cell pairs or when simply counting
                    the pairs (no ravg requested)  */
-                if(same_cell == 0 && need_ravg == 0 && need_weighted_pairs == 0) {
-                    const AVX_FLOATS m_last_bin = AVX_BITWISE_AND(m_mask_left, AVX_COMPARE_FLOATS(r2, m_rupp_sqr[nbin-1], _CMP_GE_OS));
+                if(same_cell == 0 && need_ravg == 0 && need_wavg == 0) {
+                    const AVX_FLOATS m_last_bin = AVX_BITWISE_AND(m_mask_left, AVX_COMPARE_FLOATS(r2, m_edge_sqr[nbinedge-2], _CMP_GE_OS));
                     if(AVX_TEST_COMPARISON(m_last_bin) == num_left) { /* all the valid pairs are in the last bin */
-                        npairs[nbin-1] += num_left;/* add the total number of pairs to the last bin and continue j-loop*/
+                        src_npairs[nbinedge-2] += num_left;/* add the total number of pairs to the last bin and continue j-loop*/
                         continue;
                     }
                 }
@@ -246,41 +224,40 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
             if(need_ravg) {
                 union_mDperp.m_Dperp = AVX_SQRT_FLOAT(r2);
             }
-            if(need_weighted_pairs){
-                union_mweight.m_weights = avx_weight_func(&pair);
+            if(need_wavg){
+                union_mweight.m_weights = avx_weight_func(m_xdiff, m_ydiff, m_zdiff, m_wi, m_wj);
             }
 
             //Loop backwards through nbins. m_mask_left contains all the points that are less than rmax
-            for(int kbin=nbin-1;kbin>=1;kbin--) {
-                const AVX_FLOATS m1 = AVX_COMPARE_FLOATS(r2,m_rupp_sqr[kbin-1],_CMP_GE_OS);
+            for(int kbin=nbinedge-2;kbin>=0;kbin--) {
+                const AVX_FLOATS m1 = AVX_COMPARE_FLOATS(r2,m_edge_sqr[kbin],_CMP_GE_OS);
                 const AVX_FLOATS m_bin_mask = AVX_BITWISE_AND(m1,m_mask_left);
                 const int test2  = AVX_TEST_COMPARISON(m_bin_mask);
-                npairs[kbin] += AVX_BIT_COUNT_INT(test2);
-                if(need_ravg || need_weighted_pairs) {
+                src_npairs[kbin] += AVX_BIT_COUNT_INT(test2);
+                if(need_ravg || need_wavg) {
                     m_rbin = AVX_BLEND_FLOATS_WITH_MASK(m_rbin,m_kbin[kbin], m_bin_mask);
                 }
-                m_mask_left = AVX_COMPARE_FLOATS(r2,m_rupp_sqr[kbin-1],_CMP_LT_OS);
+                m_mask_left = AVX_COMPARE_FLOATS(r2,m_edge_sqr[kbin],_CMP_LT_OS);
                 const int test3 = AVX_TEST_COMPARISON(m_mask_left);
                 if(test3 == 0) {
                     break;
                 }
             }
 
-            if(need_ravg || need_weighted_pairs) {
+            if(need_ravg || need_wavg) {
                 union_rbin.m_ibin = AVX_TRUNCATE_FLOAT_TO_INT(m_rbin);
-                //protect the unroll pragma in case compiler is not icc.
-#if  __INTEL_COMPILER
-#pragma unroll(AVX_NVEC)
-#endif
+                
+                PRAGMA_UNROLL(AVX_NVEC)
                 for(int jj=0;jj<AVX_NVEC;jj++) {
                     const int kbin = union_rbin.ibin[jj];
+                    if (kbin == 0) continue;
                     if(need_ravg){
                         const DOUBLE r = union_mDperp.Dperp[jj];
-                        ravg[kbin] += r;
+                        src_ravg[kbin - 1] += r;
                     }
-                    if(need_weighted_pairs){
+                    if(need_wavg){
                         const DOUBLE weight = union_mweight.weights[jj];
-                        weighted_pairs[kbin] += weight;
+                        src_wavg[kbin - 1] += weight;
                     }
                 }
             }
@@ -292,56 +269,38 @@ int countpairs_avx_intrinsics(const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *
             const DOUBLE dz = *localz1++ - zpos;
             const DOUBLE dx = *localx1++ - xpos;
             const DOUBLE dy = *localy1++ - ypos;
-            for(int w = 0; w < pair.num_weights; w++){
-                pair.weights1[w].d = *local_w1.weights[w]++;
-            }
+            DOUBLE wj = 0.;
+            if(weight_method != NONE) wj = *localw1++;
+            
             if(dz >= max_dz) break;
 
             const DOUBLE r2 = dx*dx + dy*dy + dz*dz;
-            if(r2 >= sqr_rmax || r2 < sqr_rmin) {
-                continue;
-            }
-
-            if(need_weighted_pairs){
-                pair.dx.d = dx;
-                pair.dy.d = dy;
-                pair.dz.d = dz;
-            }
+            if(r2 >= sqr_rmax || r2 < sqr_rmin) continue;
 
             DOUBLE r = ZERO, pairweight = ZERO;
             if(need_ravg) {
                 r = SQRT(r2);
             }
-            if(need_weighted_pairs){
-                pairweight = fallback_weight_func(&pair);
+            if(need_wavg){
+                pairweight = fallback_weight_func(dx, dy, dz, wi, wj);
             }
 
-            for(int kbin=nbin-1;kbin>=1;kbin--) {
-                if(r2 >= rupp_sqr[kbin-1]) {
-                    npairs[kbin]++;
+            for(int kbin=nbinedge-2;kbin>=0;kbin--) {
+                if(r2 >= bin_edges_sqr[kbin]) {
+                    src_npairs[kbin]++;
                     if(need_ravg) {
-                        ravg[kbin] += r;
+                        src_ravg[kbin] += r;
                     }
-                    if(need_weighted_pairs){
-                        weighted_pairs[kbin] += pairweight;
+                    if(need_wavg){
+                        src_wavg[kbin] += pairweight;
                     }
                     break;
                 }
-            }
-        }//remainder loop over second set of particles
-    }//loop over first set of particles
-
-	for(int i=1;i<nbin;i++) {
-		src_npairs[i - 1] += npairs[i];
-        if(need_ravg) {
-            src_ravg[i - 1] += ravg[i];
-        }
-        if(need_weighted_pairs) {
-            src_weighted_pairs[i - 1] += weighted_pairs[i];
-        }
-    }
+            }  // kbin loop
+        }  // j loop
+    }  // i loop
 
     return EXIT_SUCCESS;
 }
 
-#endif //HAVE_AVX
+#endif // HAVE_AVX

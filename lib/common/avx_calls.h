@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef __AVX__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <immintrin.h>
@@ -257,3 +259,5 @@ static inline AVX_FLOATS inv_cosine_avx(const AVX_FLOATS X, const int order)
         } /* end of FAST_DIVIDE */                                      \
     }
 #endif /* end of PYCORRFUNC_USE_DOUBLE for defining check_and_fast_divide macro */
+
+#endif  // __AVX__

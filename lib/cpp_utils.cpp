@@ -23,6 +23,6 @@ void raise_RuntimeError(const char *msg){
 
 void argsort(int64_t *iord, DOUBLE *arr, int64_t n){
     // Sorts the array `arr` and returns the indices in `iord`
-    std::iota(iord, iord + n,  0);
+    std::iota(iord, iord + n, 0);
     std::sort(iord, iord + n, [&arr](int64_t i1, int64_t i2) {return arr[i1] < arr[i2];});
 }

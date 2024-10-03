@@ -84,41 +84,24 @@
 #define OMEGA_CHAR OMEGA_SAFE
 #endif
 
-/* Function-like macros */
-#ifdef NDEBUG
-#define XASSERT(EXP, ...)                                do{} while(0)
-#else
-#define XASSERT(EXP, ...)                                               \
-     do { if (!(EXP)) {                                                 \
-             fprintf(stderr,"An internal error has occurred: %s\tfunc: %s\tline: %d with expression `"#EXP"'\n", __FILE__, __FUNCTION__, __LINE__); \
-             fprintf(stderr,ANSI_COLOR_BLUE "Please file an issue on GitHub." ANSI_COLOR_RESET "\n"); \
-             return EXIT_FAILURE;                                       \
-         }                                                              \
-     } while (0)
-#endif
 
-#ifdef NDEBUG
-#define XPRINT(EXP, ...)                                do{} while(0)
-#else
-#define XPRINT(EXP, ...)                                               \
-     do { if (!(EXP)) {                                                 \
-             fprintf(stderr,"An internal error has occurred: %s\tfunc: %s\tline: %d with expression `"#EXP"'\n", __FILE__, __FUNCTION__, __LINE__); \
-             fprintf(stderr,__VA_ARGS__);                               \
-             fprintf(stderr,ANSI_COLOR_BLUE "Please file an issue on GitHub." ANSI_COLOR_RESET "\n"); \
-         }                                                              \
-     } while (0)
-#endif
-
-
-#ifdef NDEBUG
-#define XRETURN(EXP, VAL, ...)                                do{} while(0)
-#else
 #define XRETURN(EXP, VAL, ...)                                           \
-     do { if (!(EXP)) {                                                 \
-             fprintf(stderr,"An internal error has occurred: %s\tfunc: %s\tline: %d with expression `"#EXP"'\n", __FILE__, __FUNCTION__, __LINE__); \
-             fprintf(stderr,__VA_ARGS__);                               \
-             fprintf(stderr,ANSI_COLOR_BLUE "Please file an issue on GitHub." ANSI_COLOR_RESET "\n"); \
-             return VAL;                                                \
-         }                                                              \
-     } while (0)
+    do { if (!(EXP)) {                                                 \
+            int nwrite = sprintf(ERRMSG, "An internal error has occurred: %s:%d (%s) with expression `" #EXP "'\n" \
+                            ANSI_COLOR_BLUE "Please file an issue on GitHub." ANSI_COLOR_RESET "\n", \
+                            __FILE__, __LINE__, __FUNCTION__); \
+            nwrite += sprintf(ERRMSG + nwrite, __VA_ARGS__); \
+            return VAL;                                                \
+        }                                                              \
+    } while (0)
+
+// PRAGMA_UNROLL(N)
+// FUTURE: when OpenMP 5.1 #pragma omp unroll is available, use that instead
+
+#define STRINGIFY(X) #X
+
+#ifdef __GNUC__
+#define PRAGMA_UNROLL(N) _Pragma(STRINGIFY(GCC unroll N))
+#else
+#define PRAGMA_UNROLL(N) _Pragma(STRINGIFY(unroll N))
 #endif

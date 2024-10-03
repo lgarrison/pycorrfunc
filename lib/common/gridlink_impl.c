@@ -23,10 +23,9 @@
 #define CONVERT_3D_INDEX_TO_LINEAR(ix, iy, iz, nx, ny, nz) (ix*ny*nz + iy*nz + iz)
 
 
-int gridlink(
-    cellarray *lattice,
+cellarray *gridlink(
     const int64_t NPART,
-    DOUBLE *X, DOUBLE *Y, DOUBLE *Z, DOUBLE *W,
+    DOUBLE * const X, DOUBLE * const Y, DOUBLE * const Z, DOUBLE * const W,
     const DOUBLE xmin, const DOUBLE xmax,
     const DOUBLE ymin, const DOUBLE ymax,
     const DOUBLE zmin, const DOUBLE zmax,
@@ -56,25 +55,26 @@ int gridlink(
     const int ystatus = get_binsize(ymax-ymin, ywrap, max_y_size, ybin_refine_factor, options->max_cells_per_dim, &ybinsize, &nmesh_y);
     const int zstatus = get_binsize(zmax-zmin, zwrap, max_z_size, zbin_refine_factor, options->max_cells_per_dim, &zbinsize, &nmesh_z);
     if(xstatus != EXIT_SUCCESS || ystatus != EXIT_SUCCESS || zstatus != EXIT_SUCCESS) {
-      fprintf(stderr,"Received xstatus = %d ystatus = %d zstatus = %d. Error\n", xstatus, ystatus, zstatus);
-      return EXIT_FAILURE;
+      sprintf(ERRMSG,"Received xstatus = %d ystatus = %d zstatus = %d. Error\n", xstatus, ystatus, zstatus);
+      return NULL;
     }
 
     if(options->verbose) {
       fprintf(stderr,"In %s> Running with [nmesh_x, nmesh_y, nmesh_z]  = %d,%d,%d. ",__FUNCTION__,nmesh_x,nmesh_y,nmesh_z);
     }
 
-    if(allocate_cellarray(lattice, NPART, nmesh_x, nmesh_y, nmesh_z, W != NULL) != EXIT_SUCCESS) {
-        fprintf(stderr,"Error: Could not allocate memory for cellarray\n");
-        return EXIT_FAILURE;
+    cellarray *lattice = allocate_cellarray(NPART, nmesh_x, nmesh_y, nmesh_z, W != NULL);
+    if(lattice == NULL) {
+        sprintf(ERRMSG,"Error: Could not allocate memory for cellarray\n");
+        return NULL;
     }
     int64_t tot_ncells = lattice->tot_ncells;
 
     int64_t *all_cell_indices = (int64_t *) my_malloc(sizeof(*all_cell_indices), NPART);
     if(all_cell_indices == NULL) {
-        free_cellarray(lattice);
-        fprintf(stderr,"Error: In %s> Error allocating cell indicies\n", __FUNCTION__);
-        return EXIT_FAILURE;
+        free_cellarray(&lattice);
+        sprintf(ERRMSG,"Error: In %s> Error allocating cell indicies\n", __FUNCTION__);
+        return NULL;
     }
 
     // "binsize > 0" guards against all particles falling in a plane (or worse),
@@ -104,10 +104,10 @@ int gridlink(
     }
     
     if(out_of_bounds != 0){
-        fprintf(stderr,"Error: %"PRId64" particles are out of bounds. Check periodic wrapping?\n", out_of_bounds);
+        sprintf(ERRMSG,"Error: %"PRId64" particles are out of bounds. Check periodic wrapping?\n", out_of_bounds);
         free(all_cell_indices);
-        free_cellarray(lattice);
-        return EXIT_FAILURE;
+        free_cellarray(&lattice);
+        return NULL;
     } 
     
     // Now determine the number of particles per cell so each cell knows its global starting index
@@ -157,9 +157,9 @@ int gridlink(
     int64_t *nwritten = my_malloc(sizeof(*nwritten), tot_ncells);
     if(nwritten == NULL) {
         free(all_cell_indices);
-        free_cellarray(lattice);
-        fprintf(stderr,"Error: Could not allocate memory for storing the number of particles per cell\n");
-        return EXIT_FAILURE;
+        free_cellarray(&lattice);
+        sprintf(ERRMSG,"Error: Could not allocate memory for storing the number of particles per cell\n");
+        return NULL;
     }
 
 #if defined(_OPENMP)
@@ -204,11 +204,11 @@ int gridlink(
     // check that all particles have been written
     for(int64_t c = 0; c < tot_ncells; c++){
         if(nwritten[c] != lattice->offsets[c+1] - lattice->offsets[c]){
-            fprintf(stderr,"Error: Cell %ld has %ld particles, but should have %ld particles\n", c, nwritten[c], lattice->offsets[c+1] - lattice->offsets[c]);
+            sprintf(ERRMSG,"Error: Cell %ld has %ld particles, but should have %ld particles\n", c, nwritten[c], lattice->offsets[c+1] - lattice->offsets[c]);
             free(all_cell_indices);
             free(nwritten);
-            free_cellarray(lattice);
-            return EXIT_FAILURE;
+            free_cellarray(&lattice);
+            return NULL;
         }
     }
     
@@ -216,35 +216,71 @@ int gridlink(
     free(nwritten);
 
     /* Do we need to sort the particles in Z ? */
-    if(0 && sort_on_z) {
+    if(sort_on_z) {
         #ifdef _OPENMP
         #pragma omp parallel num_threads(options->numthreads)
         #endif
         {
             int64_t *iord = my_malloc(sizeof(*iord), maxcell);
+            DOUBLE *Xtmp = my_malloc(sizeof(*Xtmp), maxcell);
+            DOUBLE *Ytmp = my_malloc(sizeof(*Ytmp), maxcell);
+            DOUBLE *Ztmp = my_malloc(sizeof(*Ztmp), maxcell);
+            DOUBLE *Wtmp = W != NULL ? my_malloc(sizeof(*Wtmp), maxcell) : NULL;
             
             #ifdef _OPENMP
             #pragma omp for schedule(dynamic) 
             #endif
             for(int64_t icell=0;icell<tot_ncells;icell++) {
-                DOUBLE *Zcell = lattice->Z + lattice->offsets[icell];
-                int64_t ncell = lattice->offsets[icell+1] - lattice->offsets[icell];
+                int64_t k = lattice->offsets[icell];
+                DOUBLE *Zcell = lattice->Z + k;
+                int64_t ncell = lattice->offsets[icell+1] - k;
+
+                // FUTURE: use ips4o or another fast sort
+                // FUTURE: check if a direct or indirect sort is faster
                 argsort(iord, Zcell, ncell);
                 
-                DOUBLE *Xcell = lattice->X + lattice->offsets[icell];
-                DOUBLE *Ycell = lattice->Y + lattice->offsets[icell];
-                DOUBLE *Wcell = lattice->W + lattice->offsets[icell];
+                DOUBLE *Xcell = lattice->X + k;
+                DOUBLE *Ycell = lattice->Y + k;
+                DOUBLE *Wcell = lattice->W + k;
 
                 for(int64_t i=0;i<ncell;i++) {
                     int64_t j = iord[i];
-                    Xcell[i] = lattice->X[lattice->offsets[icell] + j];
-                    Ycell[i] = lattice->Y[lattice->offsets[icell] + j];
-                    if(W != NULL) Wcell[i] = lattice->W[lattice->offsets[icell] + j];
+                    Xtmp[i] = Xcell[j];
+                    Ytmp[i] = Ycell[j];
+                    Ztmp[i] = Zcell[j];
+                    if(W != NULL) Wtmp[i] = lattice->W[k + j];
+                }
+
+                for(int64_t i=0;i<ncell;i++) {
+                    Xcell[i] = Xtmp[i];
+                    Ycell[i] = Ytmp[i];
+                    Zcell[i] = Ztmp[i];
+                    if(W != NULL) Wcell[i] = Wtmp[i];
                 }
             }
 
+            free(Xtmp);
+            free(Ytmp);
+            free(Ztmp);
+            if(W != NULL) free(Wtmp);
             free(iord);
         }
+
+        // // verify sort
+        // int64_t ncheck = 0;
+        // for(int64_t icell=0;icell<tot_ncells;icell++) {
+        //     int64_t k = lattice->offsets[icell];
+        //     DOUBLE *Zcell = lattice->Z + k;
+        //     int64_t ncell = lattice->offsets[icell+1] - k;
+        //     for(int64_t i=0;i<ncell-1;i++) {
+        //         ncheck += Zcell[i] > Zcell[i+1];
+        //     }
+        // }
+        // if(ncheck != 0){
+        //     sprintf(ERRMSG,"Error: %ld particles are out of order\n", ncheck);
+        //     free_cellarray(&lattice);
+        //     return NULL;
+        // }
     }
     
     if(options->verbose) {
@@ -253,7 +289,7 @@ int gridlink(
       fprintf(stderr," Time taken = %7.3lf sec\n",ADD_DIFF_TIME(t0,t1));
     }
 
-    return EXIT_SUCCESS;
+    return lattice;
 }
 
 

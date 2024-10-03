@@ -19,3 +19,9 @@ license = { file = "LICENSE" }
 [tool.meson-python.args]
 compile = ["-v"]
 # setup = ["-Dbuildtype=debug"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

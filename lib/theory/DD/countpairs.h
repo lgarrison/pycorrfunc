@@ -11,5 +11,5 @@ int countpairs(
     config_options *options,
     uint64_t *npairs,
     DOUBLE *ravg,
-    DOUBLE *weighted_pairs
+    DOUBLE *wavg
 );

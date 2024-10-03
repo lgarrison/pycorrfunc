@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef __AVX2__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <immintrin.h>
@@ -170,3 +172,5 @@
 
   //include all the avx matters including the declarations of union_int8 etc
 #include "avx_calls.h"
+
+#endif  // __AVX2__

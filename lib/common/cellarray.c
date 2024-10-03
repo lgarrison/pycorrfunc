@@ -5,14 +5,18 @@
 
 #include "cellarray.h"
 
-int allocate_cellarray(
-    cellarray *lattice,
+cellarray *allocate_cellarray(
+    const int64_t np,
     const int nx,
     const int ny,
     const int nz,
-    const int64_t np,
     const int with_weights
     ){
+
+    cellarray *lattice = (cellarray *) my_malloc(sizeof(cellarray), 1);
+    if (lattice == NULL) {
+        return NULL;
+    }
 
     int64_t totncells = (int64_t) nx * ny * nz;
 
@@ -54,11 +58,11 @@ int allocate_cellarray(
     lattice->tot_ncells = totncells;
 
     if(validate_cellarray(lattice) != EXIT_SUCCESS){
-        free_cellarray(lattice);
-        return EXIT_FAILURE;
+        free_cellarray(&lattice);
+        return NULL;
     }
 
-    return EXIT_SUCCESS;
+    return lattice;
 }
 
 int validate_cellarray(const cellarray *lattice){
@@ -75,7 +79,14 @@ int validate_cellarray(const cellarray *lattice){
     return EXIT_SUCCESS;
 }
 
-void free_cellarray(cellarray *lattice){
+void free_cellarray(cellarray **lattice_ptr){
+    return;
+    if(lattice_ptr == NULL) return;
+
+    cellarray *lattice = *lattice_ptr;
+    *lattice_ptr = NULL;
+    if(lattice == NULL) return;
+
     free(lattice->X); lattice->X = NULL;
     free(lattice->Y); lattice->Y = NULL;
     free(lattice->Z); lattice->Z = NULL;
@@ -89,4 +100,6 @@ void free_cellarray(cellarray *lattice){
     free(lattice->ybounds[1]); lattice->ybounds[1] = NULL;
     free(lattice->zbounds[0]); lattice->zbounds[0] = NULL;
     free(lattice->zbounds[1]); lattice->zbounds[1] = NULL;
+
+    free(lattice);
 }

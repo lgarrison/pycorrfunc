@@ -3,66 +3,49 @@
 #include "defs.h"
 #include "weights.h"
 
-config_options get_config_options(const char *weight_method){
-    config_options options;
-    memset(&options, 0, sizeof(options));
+int get_config_options(config_options *options, const char *weight_method){
+    memset(options, 0, sizeof(*options));
 
-    if(get_weight_method_by_name(weight_method, &options.weight_method) != EXIT_SUCCESS){
-        // TODO: we should be able to raise proper Python exceptions via nanobind
-        // Although arguably, most checks that could raise an exception should be done in Python
-        fprintf(stderr,"Error: Unknown weight method `%s'\n", weight_method);
-        exit(EXIT_FAILURE);
+    if(get_weight_method_by_name(weight_method, &options->weight_method) != EXIT_SUCCESS){
+        sprintf(ERRMSG,"Error: Unknown weight method `%s'\n", weight_method);
+        return EXIT_FAILURE;
     }
 
     // A value of <= 0 is non-periodic, > 0 is periodic.
-    options.boxsize_x = 0.;
-    options.boxsize_y = 0.;
-    options.boxsize_z = 0.;
+    options->boxsize_x = 0.;
+    options->boxsize_y = 0.;
+    options->boxsize_z = 0.;
 
-    options.verbose = 1;
-    options.need_avg_sep = 1;
+    options->verbose = 1;
+    options->need_avg_sep = 1;
 
-#ifdef __AVX512F__
-    options.instruction_set = AVX512F;
-#elif defined(__AVX2__)
-    options.instruction_set = AVX2;
-#elif defined(HAVE_AVX)
-    options.instruction_set = AVX;
-#elif defined(HAVE_SSE42)
-    options.instruction_set = SSE42;
-#else
-    options.instruction_set = FALLBACK;
-#endif
+    options->instruction_set = FASTEST;
 
     /* Options specific to mocks */
     /* Options for DDrppi_mocks (FAST_DIVIDE is also applicable for both DDsmu, and DDsmu_mocks) */
 #if defined(FAST_DIVIDE)
 #if FAST_DIVIDE > MAX_FAST_DIVIDE_NR_STEPS
-    options.fast_divide_and_NR_steps = MAX_FAST_DIVIDE_NR_STEPS;
+    options->fast_divide_and_NR_steps = MAX_FAST_DIVIDE_NR_STEPS;
 #else
-    options.fast_divide_and_NR_steps = FAST_DIVIDE;
+    options->fast_divide_and_NR_steps = FAST_DIVIDE;
 #endif
 #endif
 
-    options.link_in_ra=1;
-    options.link_in_dec=1;
-
-    //Introduced in Corrfunc v2.3
-    /* optimizations based on min. separation between cell-pairs. Enabled by default */
-    options.enable_min_sep_opt=1;
+    options->link_in_ra=1;
+    options->link_in_dec=1;
     
-    options.fast_acos=1;
+    options->fast_acos=1;
 
     /* For the thread timings */
-    options.totncells_timings = 0;
+    options->totncells_timings = 0;
     /* If the API level timers are requested, then
        this pointer will have to be allocated */
-    options.cell_timings = NULL;
+    options->cell_timings = NULL;
 
     /*Setup the binning options */
-    reset_max_cells(&options);
-    reset_bin_refine_factors(&options);
-    return options;
+    reset_max_cells(options);
+    reset_bin_refine_factors(options);
+    return EXIT_SUCCESS;
 }
 
 void free_cell_timings(config_options *options)

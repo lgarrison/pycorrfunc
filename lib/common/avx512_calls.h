@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(__AVX512F__)
+#ifdef __AVX512F__
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -397,4 +397,4 @@ static inline AVX512_FLOATS inv_cosine_avx512(const AVX512_FLOATS X, const int o
       } /* end of FAST_DIVIDE */                                        \
   }
 
-#endif /* if defined(AVX512F) */
+#endif  // __AVX512F__

@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-from typing import Optional
-
 import numpy as np
 import astropy.table
 
@@ -29,37 +26,45 @@ def DD(
     num_threads=None,
     boxsize=None,
     Rmax=None,
-    weight_type=None,
+    weight_method=None,
     verbose=False,
     isa="fastest",
+    dtype=np.float64,
 ):
-    dtype = X1.dtype
-    X1 = np.asarray(X1, dtype=dtype)
-    Y1 = np.asarray(Y1, dtype=dtype)
-    Z1 = np.asarray(Z1, dtype=dtype)
-    X2 = np.asarray(X2, dtype=dtype)
-    Y2 = np.asarray(Y2, dtype=dtype)
-    Z2 = np.asarray(Z2, dtype=dtype)
+    dtype = np.dtype(dtype)
+    X1 = np.ascontiguousarray(X1, dtype=dtype)
+    Y1 = np.ascontiguousarray(Y1, dtype=dtype)
+    Z1 = np.ascontiguousarray(Z1, dtype=dtype)
+    
+    if X2 is not None:
+        X2 = np.ascontiguousarray(X2, dtype=dtype)
+    if Y2 is not None:
+        Y2 = np.ascontiguousarray(Y2, dtype=dtype)
+    if Z2 is not None:
+        Z2 = np.ascontiguousarray(Z2, dtype=dtype)
 
     # TODO: support multiple weights per particle,
     # possibly of different types (e.g., DOUBLE and int for bit flags)
     if W1 is not None:
-        W1 = np.asarray(W1, dtype=dtype)
+        W1 = np.ascontiguousarray(W1, dtype=dtype)
     if W2 is not None:
-        W2 = np.asarray(W2, dtype=dtype)
+        W2 = np.ascontiguousarray(W2, dtype=dtype)
+
+    if boxsize is not None:
+        boxsize = np.broadcast_to(np.asarray(boxsize, dtype=dtype), (3,))
 
     if type(bins) is int:
         if Rmax is None:
             raise ValueError("Rmax should be provided when bins is an integer")
         bin_edges = np.linspace(0, Rmax, bins + 1, dtype=dtype)
     else:
-        bin_edges = np.asarray(bins, dtype=dtype)
+        bin_edges = np.ascontiguousarray(bins, dtype=dtype)
         if Rmax is not None:
             raise ValueError("Rmax should not be provided when bins is an array")
 
     npairs = np.zeros(len(bin_edges) - 1, dtype=np.uint64)
     ravg = np.zeros(len(bin_edges) - 1, dtype=dtype)
-    weighted_pairs = np.zeros(len(bin_edges) - 1, dtype=dtype)
+    wavg = np.zeros(len(bin_edges) - 1, dtype=dtype)
 
     module = {np.float32: _pycorrfuncf, np.float64: _pycorrfunc}[dtype.type]
 
@@ -80,10 +85,10 @@ def DD(
         bin_edges=bin_edges,
         npairs=npairs,
         ravg=ravg,
-        weighted_pairs=weighted_pairs,
+        wavg=wavg,
         num_threads=num_threads,
         boxsize=boxsize,
-        weight_type=weight_type,
+        weight_method=weight_method,
         verbose=verbose,
         isa=isa,
     )
@@ -92,13 +97,13 @@ def DD(
         {
             "npairs": npairs,
             "ravg": ravg,
-            "weighted_pairs": weighted_pairs,
+            "wavg": wavg,
         },
         meta={
             "N1": len(X1),
-            "N2": len(X2),
+            "N2": len(X2) if X2 is not None else None,
             "autocorr": X2 is None,
-            "weight_type": weight_type,
+            "weight_method": weight_method,
             "boxsize": boxsize,
         },
     )

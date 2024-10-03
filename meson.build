@@ -25,20 +25,19 @@ cc = meson.get_compiler('c')
 inc = include_directories('include', 'lib/theory/DD', 'lib/common', 'tests')
 
 simd_check_kwargs = {
-  # 'sse42' : 'lib/theory/DD/kernel_sse42.c',
-  # 'avx' : 'lib/theory/DD/kernel_avx.c',
-  # 'avx512' : 'lib/theory/DD/kernel_avx512.c',
+  'sse42' : 'lib/theory/DD/kernel_sse42.c',
+  'avx' : 'lib/theory/DD/kernel_avx.c',
   'compiler' : cc,
   'include_directories' : inc,
 }
 
-cdata = configuration_data()
+simd_cdata = configuration_data()
 simdinfo_float = simd.check(
   'kernels_float',
   kwargs : simd_check_kwargs
 )
 simdlibs_float = simdinfo_float[0]
-cdata.merge_from(simdinfo_float[1])
+simd_cdata.merge_from(simdinfo_float[1])
 
 simdinfo_double = simd.check(
   'kernels_double',
@@ -67,7 +66,6 @@ sources = [
   'lib/main.cpp',
   'lib/theory/DD/countpairs.c',
   'lib/theory/DD/kernel_fallback.c',
-  # 'lib/common/avx512_calls.c',
 ]
 
 extension_kwargs = {
@@ -92,8 +90,8 @@ pycorrfunc_float = py.extension_module(
   link_with : simdlibs_float,
 )
 
-# N.B. simdconfig. is precision independent, so we'll just use the cdata from float
-configure_file(output : 'simdconfig.h', configuration : cdata)
+# N.B. simdconfig.h is precision independent, so we'll just use the cdata from float
+configure_file(output : 'simdconfig.h', configuration : simd_cdata)
 
 install_subdir(
   'src/pycorrfunc',

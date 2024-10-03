@@ -14,6 +14,8 @@ typedef double DOUBLE;
 typedef float DOUBLE;
 #endif
 
+extern char ERRMSG[1024];
+
 #include "macros.h"
 
 #define QUOTE(name) #name
@@ -100,8 +102,6 @@ typedef struct {
     uint8_t fast_acos;
 
     /* Enabled by default */
-    uint8_t enable_min_sep_opt; /* Whether to enable min. separation optimizations introduced in v2.3 */
-
     int8_t bin_refine_factors[3]; /* Array for the custom bin refine factors in each dim
                                      xyz for theory routines and ra/dec/cz for mocks
                                      Must be signed integers since some for loops might use -bin_refine_factor
@@ -135,7 +135,7 @@ void reset_bin_refine_factors(config_options *options);
 void set_max_cells(config_options *options, const int max);
 void reset_max_cells(config_options *options);
 
-config_options get_config_options(const char *weight_method);
+int get_config_options(config_options *options, const char *weight_method);
 
 void free_cell_timings(config_options *options);
 

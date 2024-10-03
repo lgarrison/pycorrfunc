@@ -19,7 +19,7 @@ int get_binsize(const DOUBLE xdiff, const DOUBLE xwrap, const DOUBLE rmax, const
     nmesh = nmesh < 1 ? 1:nmesh;
     
     if(xwrap > 0 && rmax >= xwrap/2){
-        fprintf(stderr,"%s> ERROR: rmax=%f must be less than half of periodic boxize=%f to avoid double-counting particles\n",
+        sprintf(ERRMSG,"%s> ERROR: rmax=%f must be less than half of periodic boxize=%f to avoid double-counting particles\n",
             __FILE__,rmax,xwrap);
         return EXIT_FAILURE;
     }
