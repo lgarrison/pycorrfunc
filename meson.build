@@ -80,14 +80,16 @@ pycorrfunc_double = py.extension_module(
   '_pycorrfunc',
   kwargs : extension_kwargs,
   link_with : simdlibs_double,
-  c_args : ['-DPYCORRFUNC_USE_DOUBLE'],
-  cpp_args : ['-DPYCORRFUNC_USE_DOUBLE'],
+  c_args : ['-DPYCORRFUNC_USE_DOUBLE', '-DNB_DOMAIN=d'],
+  cpp_args : ['-DPYCORRFUNC_USE_DOUBLE', '-DNB_DOMAIN=d'],
 )
 
 pycorrfunc_float = py.extension_module(
   '_pycorrfuncf',
   kwargs : extension_kwargs,
   link_with : simdlibs_float,
+  c_args : ['-DNB_DOMAIN=f'],
+  cpp_args : ['-DNB_DOMAIN=f'],
 )
 
 # N.B. simdconfig.h is precision independent, so we'll just use the cdata from float

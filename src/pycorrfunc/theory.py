@@ -3,7 +3,7 @@ import astropy.table
 
 from . import _pycorrfunc, _pycorrfuncf
 
-from .isa import lookup_isa
+from .isa import _lookup_isa
 
 # import Corrfunc
 # import pycorrfunc.compat as Corrfunc
@@ -71,7 +71,7 @@ def DD(
     if num_threads is None:
         num_threads = 0
 
-    isa = lookup_isa(isa)
+    isa = _lookup_isa(isa, module)
 
     module.countpairs(
         X1=X1,

@@ -45,7 +45,7 @@ void countpairs_wrapper(
     std::optional<nb::ndarray<const DOUBLE, nb::ndim<1>, nb::device::cpu>> boxsize,
     std::optional<const std::string> weight_method,
     bool verbose,
-    int isa
+    isa_t isa
     // bin_refine_factors
     ) {
 
@@ -73,7 +73,7 @@ void countpairs_wrapper(
     }
     options.autocorr = !X2.has_value();
     options.verbose = verbose;
-    options.instruction_set = static_cast<isa_t>(isa);
+    options.instruction_set = isa;
 
     int64_t ND1 = X1.shape(0);
     int64_t ND2 = X2.has_value() ? X2->shape(0) : 0;
@@ -128,4 +128,12 @@ NB_MODULE(NB_NAME, m) {
         "verbose"_a.noconvert(),
         "isa"_a.noconvert()
     );
+
+    nb::enum_<isa_t>(m, "isa_t")
+        .value("FASTEST", FASTEST)
+        .value("FALLBACK", FALLBACK)
+        .value("SSE42", SSE42)
+        .value("AVX", AVX)
+        .value("AVX512", AVX512F)
+        .export_values();
 }

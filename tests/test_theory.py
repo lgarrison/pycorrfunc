@@ -163,6 +163,18 @@ def test_brute(
     npt.assert_equal(results["wavg"], brute_wavg)
 
 
+def test_isa_error():
+    with pytest.raises(ValueError, match='ISA'):
+        theory.DD(
+            X1=np.array([0.0]),
+            Y1=np.array([0.0]),
+            Z1=np.array([0.0]),
+            W1=np.array([1.0]),
+            bins=np.array([0.0, 1.0]),
+            isa="not_an_isa",
+        )
+
+
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
 def test_one_dev(dtype):
     # make a particle at (0, 0, 0) and (1, 1, 1)
