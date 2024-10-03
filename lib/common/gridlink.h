@@ -18,9 +18,9 @@ cellarray *gridlink(
     const DOUBLE xwrap,
     const DOUBLE ywrap,
     const DOUBLE zwrap,
-    const int xbin_refine_factor,
-    const int ybin_refine_factor,
-    const int zbin_refine_factor,
+    const int xgrid_refine_factor,
+    const int ygrid_refine_factor,
+    const int zgrid_refine_factor,
     const int sort_on_z,
     const config_options *options
 ) __attribute__((warn_unused_result));
@@ -29,7 +29,7 @@ struct cell_pair *generate_cell_pairs(
     int64_t *ncell_pairs,
     const cellarray *lattice1,
     const cellarray *lattice2,
-    const int xbin_refine_factor, const int ybin_refine_factor, const int zbin_refine_factor,
+    const int xgrid_refine_factor, const int ygrid_refine_factor, const int zgrid_refine_factor,
     const DOUBLE xdiff, const DOUBLE ydiff, const DOUBLE zdiff,
     const DOUBLE max_3D_sep, const DOUBLE max_2D_sep, const DOUBLE max_1D_sep,
     const int enable_min_sep_opt,

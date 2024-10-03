@@ -8,7 +8,7 @@
 #include "utils.h"
 
 #include "gridlink_utils.h"
-#include "gridlink_impl.h"
+#include "gridlink.h"
 
 #include "cpp_utils.h"
 
@@ -35,9 +35,9 @@ cellarray *gridlink(
     const DOUBLE xwrap,
     const DOUBLE ywrap,
     const DOUBLE zwrap,
-    const int xbin_refine_factor,
-    const int ybin_refine_factor,
-    const int zbin_refine_factor,
+    const int xgrid_refine_factor,
+    const int ygrid_refine_factor,
+    const int zgrid_refine_factor,
     const int sort_on_z,
     const config_options *options
     ){
@@ -49,11 +49,11 @@ cellarray *gridlink(
         gettimeofday(&t0,NULL);
     }
 
-    DOUBLE xbinsize=ZERO, ybinsize=ZERO, zbinsize=ZERO;
+    DOUBLE xgridsize=ZERO, ygridsize=ZERO, zgridsize=ZERO;
 
-    const int xstatus = get_binsize(xmax-xmin, xwrap, max_x_size, xbin_refine_factor, options->max_cells_per_dim, &xbinsize, &nmesh_x);
-    const int ystatus = get_binsize(ymax-ymin, ywrap, max_y_size, ybin_refine_factor, options->max_cells_per_dim, &ybinsize, &nmesh_y);
-    const int zstatus = get_binsize(zmax-zmin, zwrap, max_z_size, zbin_refine_factor, options->max_cells_per_dim, &zbinsize, &nmesh_z);
+    const int xstatus = get_gridsize(xmax-xmin, xwrap, max_x_size, xgrid_refine_factor, options->max_cells_per_dim, &xgridsize, &nmesh_x);
+    const int ystatus = get_gridsize(ymax-ymin, ywrap, max_y_size, ygrid_refine_factor, options->max_cells_per_dim, &ygridsize, &nmesh_y);
+    const int zstatus = get_gridsize(zmax-zmin, zwrap, max_z_size, zgrid_refine_factor, options->max_cells_per_dim, &zgridsize, &nmesh_z);
     if(xstatus != EXIT_SUCCESS || ystatus != EXIT_SUCCESS || zstatus != EXIT_SUCCESS) {
       sprintf(ERRMSG,"Received xstatus = %d ystatus = %d zstatus = %d. Error\n", xstatus, ystatus, zstatus);
       return NULL;
@@ -77,11 +77,11 @@ cellarray *gridlink(
         return NULL;
     }
 
-    // "binsize > 0" guards against all particles falling in a plane (or worse),
+    // "gridsize > 0" guards against all particles falling in a plane (or worse),
     // in which case we set the inv to 0 to assign all particles to the first cell
-    const DOUBLE xinv = xbinsize > 0 ? 1.0/xbinsize : 0.;
-    const DOUBLE yinv = ybinsize > 0 ? 1.0/ybinsize : 0.;
-    const DOUBLE zinv = zbinsize > 0 ? 1.0/zbinsize : 0.;
+    const DOUBLE xinv = xgridsize > 0 ? 1.0/xgridsize : 0.;
+    const DOUBLE yinv = ygridsize > 0 ? 1.0/ygridsize : 0.;
+    const DOUBLE zinv = zgridsize > 0 ? 1.0/zgridsize : 0.;
 
     // First pass over the particles: compute cell indices
     int64_t out_of_bounds = 0;
@@ -297,7 +297,7 @@ struct cell_pair *generate_cell_pairs(
     int64_t *ncell_pairs,
     const cellarray *lattice1,
     const cellarray *lattice2,
-    const int xbin_refine_factor, const int ybin_refine_factor, const int zbin_refine_factor,
+    const int xgrid_refine_factor, const int ygrid_refine_factor, const int zgrid_refine_factor,
     const DOUBLE xwrap, const DOUBLE ywrap, const DOUBLE zwrap,
     const DOUBLE max_3D_sep, const DOUBLE max_2D_sep, const DOUBLE max_1D_sep,
     const int enable_min_sep_opt,
@@ -309,9 +309,9 @@ struct cell_pair *generate_cell_pairs(
     const int64_t nmesh_y = lattice1->nmesh_y;
     const int64_t nmesh_z = lattice1->nmesh_z;
 
-    const int64_t nx_ngb = 2*xbin_refine_factor + 1;
-    const int64_t ny_ngb = 2*ybin_refine_factor + 1;
-    const int64_t nz_ngb = 2*zbin_refine_factor + 1;
+    const int64_t nx_ngb = 2*xgrid_refine_factor + 1;
+    const int64_t ny_ngb = 2*ygrid_refine_factor + 1;
+    const int64_t nz_ngb = 2*zgrid_refine_factor + 1;
     const int64_t max_ngb_cells = nx_ngb * ny_ngb * nz_ngb - 1; // -1 for self
     
     const int any_periodic = periodic_x || periodic_y || periodic_z;
@@ -324,13 +324,13 @@ struct cell_pair *generate_cell_pairs(
     struct cell_pair *all_cell_pairs = my_malloc(sizeof(*all_cell_pairs), max_num_cell_pairs);
     XRETURN(all_cell_pairs != NULL, NULL,
             "Error: Could not allocate memory for storing all the cell pairs. "
-            "Reducing bin refine factors might help. Requested for %"PRId64" elements "
+            "Reducing grid refine factors might help. Requested for %"PRId64" elements "
             "with each element of size %zu bytes\n", max_num_cell_pairs, sizeof(*all_cell_pairs));
 
 
     /* Under periodic boundary conditions + small nmesh_x/y/z, the periodic wrapping would cause
        the same cell to be included as an neighbour cell from both the left and the right side (i.e.,
-       when including cells with -bin_refine_factor, and when including cells up to +bin_refine_factor)
+       when including cells with -grid_refine_factor, and when including cells up to +grid_refine_factor)
 
        Previously this would throw an error, but we can simply not add the duplicate cells.
 
@@ -339,9 +339,9 @@ struct cell_pair *generate_cell_pairs(
        MS: 23/8/2019
      */
     const int check_for_duplicate_ngb_cells = ( any_periodic &&
-                                                (nmesh_x < (2*xbin_refine_factor + 1) ||
-                                                 nmesh_y < (2*ybin_refine_factor + 1) ||
-                                                 nmesh_z < (2*zbin_refine_factor + 1))  ) ? 1:0;
+                                                (nmesh_x < (2*xgrid_refine_factor + 1) ||
+                                                 nmesh_y < (2*ygrid_refine_factor + 1) ||
+                                                 nmesh_z < (2*zgrid_refine_factor + 1))  ) ? 1:0;
     for(int64_t icell=0;icell<lattice1->tot_ncells;icell++) {
         int64_t first_N = lattice1->offsets[icell+1] - lattice1->offsets[icell];
         if(first_N == 0) continue;
@@ -353,20 +353,20 @@ struct cell_pair *generate_cell_pairs(
                 icell, (ix * nmesh_y * nmesh_z + iy * nmesh_z + (int64_t) iz));
 
         int64_t num_ngb_this_cell = 0;
-        for(int iix=-xbin_refine_factor;iix<=xbin_refine_factor;iix++){
+        for(int iix=-xgrid_refine_factor;iix<=xgrid_refine_factor;iix++){
             const int periodic_ix = (ix + iix + nmesh_x) % nmesh_x;
             const int non_periodic_ix = ix + iix;
             const int iiix = (periodic_x == 1) ? periodic_ix:non_periodic_ix;
             if(iiix < 0 || iiix >= nmesh_x) continue;
             const DOUBLE off_xwrap = ((ix + iix) >= 0) && ((ix + iix) < nmesh_x) ? 0.0: ((ix+iix) < 0 ? xwrap:-xwrap);
 
-            for(int iiy=-ybin_refine_factor;iiy<=ybin_refine_factor;iiy++) {
+            for(int iiy=-ygrid_refine_factor;iiy<=ygrid_refine_factor;iiy++) {
                 const int periodic_iy = (iy + iiy + nmesh_y) % nmesh_y;
                 const int non_periodic_iy = iy + iiy;
                 const int iiiy = (periodic_y == 1) ? periodic_iy:non_periodic_iy;
                 if(iiiy < 0 || iiiy >= nmesh_y) continue;
                 const DOUBLE off_ywrap = ((iy + iiy) >= 0) && ((iy + iiy) < nmesh_y) ? 0.0: ((iy+iiy) < 0 ? ywrap:-ywrap);
-                for(int64_t iiz=-zbin_refine_factor;iiz<=zbin_refine_factor;iiz++){
+                for(int64_t iiz=-zgrid_refine_factor;iiz<=zgrid_refine_factor;iiz++){
                     const int periodic_iz = (iz + iiz + nmesh_z) % nmesh_z;
                     const int non_periodic_iz = iz + iiz;
                     const int iiiz = (periodic_z == 1) ? periodic_iz:non_periodic_iz;

@@ -12,8 +12,8 @@
 #endif
 
 
-int get_binsize(const DOUBLE xdiff, const DOUBLE xwrap, const DOUBLE rmax, const int refine_factor, const int max_ncells,
-                       DOUBLE *xbinsize, int *nlattice)
+int get_gridsize(const DOUBLE xdiff, const DOUBLE xwrap, const DOUBLE rmax, const int refine_factor, const int max_ncells,
+                       DOUBLE *xgridsize, int *nlattice)
 {
     int nmesh=(int)(refine_factor*xdiff/rmax);
     nmesh = nmesh < 1 ? 1:nmesh;
@@ -26,7 +26,7 @@ int get_binsize(const DOUBLE xdiff, const DOUBLE xwrap, const DOUBLE rmax, const
 
     if (nmesh>max_ncells)  nmesh=max_ncells;
     if (nmesh<2)  nmesh=2;  // to avoid forming duplicate cell pairs
-    *xbinsize = xdiff/nmesh;
+    *xgridsize = xdiff/nmesh;
     *nlattice = nmesh;
 
     return EXIT_SUCCESS;

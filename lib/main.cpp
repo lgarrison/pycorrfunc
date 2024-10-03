@@ -46,7 +46,7 @@ void countpairs_wrapper(
     std::optional<const std::string> weight_method,
     bool verbose,
     isa_t isa
-    // bin_refine_factors
+    // grid_refine_factors
     ) {
 
     if (num_threads < 1) {

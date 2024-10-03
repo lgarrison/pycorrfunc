@@ -78,7 +78,7 @@ endif
 
 sources = [
   'lib/common/cellarray.c',
-  'lib/common/gridlink_impl.c',
+  'lib/common/gridlink.c',
   'lib/common/gridlink_utils.c',
   'lib/common/gridlink_utils.c',
   'lib/common/options.c',

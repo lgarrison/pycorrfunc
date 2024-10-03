@@ -21,19 +21,16 @@ extern char ERRMSG[1024];
 #define QUOTE(name) #name
 #define STR(macro) QUOTE(macro)
 
-/* Macros as mask for the binning_flags */
+/* Macros as mask for the gridding_flags */
 /* These constitute the 32 bytes for
-the ``uint32_t binning_flags`` */
+the ``uint32_t gridding_flags`` */
 
-#define BINNING_REF_MASK         0x0000000F // Last 4 bits for how the bin sizes are calculated. Also indicates if refines are in place
-#define BINNING_ORD_MASK         0x000000F0 // Next 4 bits for how the 3-D-> 1-D index conversion
+#define GRIDDING_REF_MASK         0x0000000F // Last 4 bits for how the grid sizes are calculated. Also indicates if refines are in place
+#define GRIDDING_ORD_MASK         0x000000F0 // Next 4 bits for how the 3-D-> 1-D index conversion
 /* The upper 24 bits are unused currently */
 
-#define BINNING_DFL   0x0
-#define BINNING_CUST  0x1
-
-// TODO: make portable
-#define CACHELINE 64
+#define GRIDDING_DFL   0x0
+#define GRIDDING_CUST  0x1
 
 typedef struct {
     int64_t N1;/* Number of points in the first cell */
@@ -102,20 +99,20 @@ typedef struct {
     uint8_t fast_acos;
 
     /* Enabled by default */
-    int8_t bin_refine_factors[3]; /* Array for the custom bin refine factors in each dim
+    int8_t grid_refine_factors[3]; /* Array for the custom grid refine factors in each dim
                                      xyz for theory routines and ra/dec/cz for mocks
-                                     Must be signed integers since some for loops might use -bin_refine_factor
+                                     Must be signed integers since some for loops might use -grid_refine_factor
                                      as the starting point */
 
     uint16_t max_cells_per_dim; /* max number of cells per dimension. same for both theory and mocks */
 
     union {
-        uint32_t binning_flags; /* flag for all linking features,
-                                   Will contain OR'ed flags from enum from `binning_scheme`
+        uint32_t gridding_flags; /* flag for all linking features,
+                                   Will contain OR'ed flags from enum from `gridding_scheme`
                                    Intentionally set as unsigned int, since in the
                                    future we might want to support some bit-wise OR'ed
                                    functionality */
-        uint8_t bin_masks[4];
+        uint8_t grid_masks[4];
     };
     
     weight_method_t weight_method; // the function that will get called to give the weight of a particle pair
@@ -126,12 +123,12 @@ typedef struct {
 } config_options;
 
 
-void set_bin_refine_scheme(config_options *options, const int8_t flag);
-void reset_bin_refine_scheme(config_options *options);
-int8_t get_bin_refine_scheme(config_options *options);
-void set_bin_refine_factors(config_options *options, const int bin_refine_factors[3]);
-void set_custom_bin_refine_factors(config_options *options, const int bin_refine_factors[3]);
-void reset_bin_refine_factors(config_options *options);
+void set_grid_refine_scheme(config_options *options, const int8_t flag);
+void reset_grid_refine_scheme(config_options *options);
+int8_t get_grid_refine_scheme(config_options *options);
+void set_grid_refine_factors(config_options *options, const int grid_refine_factors[3]);
+void set_custom_grid_refine_factors(config_options *options, const int grid_refine_factors[3]);
+void reset_grid_refine_factors(config_options *options);
 void set_max_cells(config_options *options, const int max);
 void reset_max_cells(config_options *options);
 

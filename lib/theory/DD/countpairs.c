@@ -20,7 +20,7 @@
 #include "utils.h"
 #include "progressbar.h"
 
-#include "gridlink_impl.h"
+#include "gridlink.h"
 #include "gridlink_utils.h"
 
 #include "simdconfig.h"
@@ -166,16 +166,16 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         }
     }
     
-    // Set the bin refine factors
-    if(get_bin_refine_scheme(options) == BINNING_DFL) {
+    // Set the grid refine factors
+    if(get_grid_refine_scheme(options) == GRIDDING_DFL) {
         if(rmax < 0.05*xwrap) {
-            options->bin_refine_factors[0] = 1;
+            options->grid_refine_factors[0] = 1;
         }
         if(rmax < 0.05*ywrap) {
-            options->bin_refine_factors[1] = 1;
+            options->grid_refine_factors[1] = 1;
         }
         if(rmax < 0.05*zwrap) {
-            options->bin_refine_factors[2] = 1;
+            options->grid_refine_factors[2] = 1;
         }
     }
 
@@ -186,9 +186,9 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         xmin, xmax, ymin, ymax, zmin, zmax,
         rmax, rmax, rmax,
         xwrap, ywrap, zwrap,
-        options->bin_refine_factors[0],
-        options->bin_refine_factors[1],
-        options->bin_refine_factors[2],
+        options->grid_refine_factors[0],
+        options->grid_refine_factors[1],
+        options->grid_refine_factors[2],
         sort_on_z,
         options
         );
@@ -197,7 +197,7 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         return EXIT_FAILURE;
     }
 
-    /* If there too few cells (BOOST_CELL_THRESH is ~10), and the number of cells can be increased, then boost bin refine factor by ~1*/
+    /* If there too few cells (BOOST_CELL_THRESH is ~10), and the number of cells can be increased, then boost grid refine factor by ~1*/
     // TODO: don't regrid!! Compute these stats beforehand.
     const double avg_np = ((double)ND1)/(lattice1->nmesh_x*lattice1->nmesh_y*lattice1->nmesh_z);
     const int max_nmesh = fmax(lattice1->nmesh_x, fmax(lattice1->nmesh_y, lattice1->nmesh_z));
@@ -206,22 +206,22 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         if(options->verbose) {
             fprintf(stderr,"%s> gridlink seems inefficient. nmesh = (%d, %d, %d); avg_np = %.3g. ", __FUNCTION__, lattice1->nmesh_x, lattice1->nmesh_y, lattice1->nmesh_z, avg_np);
         }
-        if(get_bin_refine_scheme(options) == BINNING_DFL) {
+        if(get_grid_refine_scheme(options) == GRIDDING_DFL) {
             if(options->verbose) {
-                fprintf(stderr,"Boosting bin refine factor - should lead to better performance\n");
+                fprintf(stderr,"Boosting grid refine factor - should lead to better performance\n");
                 fprintf(stderr,"xmin = %lf xmax=%lf rmax = %lf\n", xmin, xmax, rmax);
             }
             free_cellarray(&lattice1);
             // Only boost the first two dimensions.  Prevents excessive refinement.
             for(int i=0;i<2;i++) {
-                options->bin_refine_factors[i] += BOOST_BIN_REF;
+                options->grid_refine_factors[i] += BOOST_BIN_REF;
             }
             lattice1 = gridlink(
                 ND1, X1, Y1, Z1, W1,
                 xmin, xmax, ymin, ymax, zmin, zmax,
                 rmax, rmax, rmax,
                 xwrap, ywrap, zwrap,
-                options->bin_refine_factors[0], options->bin_refine_factors[1], options->bin_refine_factors[2],
+                options->grid_refine_factors[0], options->grid_refine_factors[1], options->grid_refine_factors[2],
                 sort_on_z,
                 options);
             if(lattice1 == NULL) {
@@ -230,9 +230,9 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
             }
         } else {
             if(options->verbose) {
-                fprintf(stderr,"Boosting bin refine factor could have helped. However, since custom bin refine factors "
-                        "= (%d, %d, %d) are being used - continuing with inefficient mesh\n", options->bin_refine_factors[0],
-                        options->bin_refine_factors[1], options->bin_refine_factors[2]);
+                fprintf(stderr,"Boosting grid refine factor could have helped. However, since custom grid refine factors "
+                        "= (%d, %d, %d) are being used - continuing with inefficient mesh\n", options->grid_refine_factors[0],
+                        options->grid_refine_factors[1], options->grid_refine_factors[2]);
             }
         }
     }
@@ -243,7 +243,7 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
                                    xmin, xmax, ymin, ymax, zmin, zmax,
                                    rmax, rmax, rmax,
                                    xwrap, ywrap, zwrap,
-                                   options->bin_refine_factors[0], options->bin_refine_factors[1], options->bin_refine_factors[2],
+                                   options->grid_refine_factors[0], options->grid_refine_factors[1], options->grid_refine_factors[2],
                                    sort_on_z,
                                    options);
         if(lattice2 == NULL) {
@@ -267,9 +267,9 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
     struct cell_pair *all_cell_pairs = generate_cell_pairs(
         &num_cell_pairs,
         lattice1, lattice2,
-        options->bin_refine_factors[0],
-        options->bin_refine_factors[1],
-        options->bin_refine_factors[2],
+        options->grid_refine_factors[0],
+        options->grid_refine_factors[1],
+        options->grid_refine_factors[2],
         xwrap, ywrap, zwrap,
         rmax, -1.0, -1.0, /*max_3D_sep, max_2D_sep, max_1D_sep*/
         enable_min_sep_opt,
@@ -486,6 +486,6 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         }
     }    
 
-    reset_bin_refine_factors(options);
+    reset_grid_refine_factors(options);
     return EXIT_SUCCESS;
 }

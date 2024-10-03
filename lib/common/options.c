@@ -42,9 +42,9 @@ int get_config_options(config_options *options, const char *weight_method){
        this pointer will have to be allocated */
     options->cell_timings = NULL;
 
-    /*Setup the binning options */
+    /*Setup the gridding options */
     reset_max_cells(options);
-    reset_bin_refine_factors(options);
+    reset_grid_refine_factors(options);
     return EXIT_SUCCESS;
 }
 
@@ -85,51 +85,51 @@ void assign_cell_timer(api_cell_timings *cell_timings, const int64_t num_cell_pa
     }
 }
 
-void set_bin_refine_scheme(config_options *options, const int8_t flag) {
-    // Set the top (nbits-4) to whatever already exists in binning_flag
+void set_grid_refine_scheme(config_options *options, const int8_t flag) {
+    // Set the top (nbits-4) to whatever already exists in gridding_flag
     // and then set the bottom 4 bits to BIN_DFL
-    options->binning_flags = (options->binning_flags & ~BINNING_REF_MASK) | (flag & BINNING_REF_MASK);
+    options->gridding_flags = (options->gridding_flags & ~GRIDDING_REF_MASK) | (flag & GRIDDING_REF_MASK);
 }
 
-void reset_bin_refine_scheme(config_options *options) {
-    set_bin_refine_scheme(options, BINNING_DFL);
+void reset_grid_refine_scheme(config_options *options) {
+    set_grid_refine_scheme(options, GRIDDING_DFL);
 }
 
-int8_t get_bin_refine_scheme(config_options *options) {
+int8_t get_grid_refine_scheme(config_options *options) {
     // Return the last 4 bits as 8 bits int
-    return (int8_t)(options->binning_flags & BINNING_REF_MASK);
+    return (int8_t)(options->gridding_flags & GRIDDING_REF_MASK);
 }
 
-void set_bin_refine_factors(config_options *options, const int bin_refine_factors[3]) {
+void set_grid_refine_factors(config_options *options, const int grid_refine_factors[3]) {
     for(int i = 0; i < 3; i++) {
-        int8_t bin_refine = bin_refine_factors[i];
-        if(bin_refine_factors[i] > INT8_MAX) {
-            fprintf(stderr,"Warning: bin refine factor[%d] can be at most %d. Found %d instead\n", i,
-                    INT8_MAX, bin_refine_factors[i]);
-            bin_refine = 1;
+        int8_t grid_refine = grid_refine_factors[i];
+        if(grid_refine_factors[i] > INT8_MAX) {
+            fprintf(stderr,"Warning: grid refine factor[%d] can be at most %d. Found %d instead\n", i,
+                    INT8_MAX, grid_refine_factors[i]);
+            grid_refine = 1;
         }
-        options->bin_refine_factors[i] = bin_refine;
+        options->grid_refine_factors[i] = grid_refine;
     }
     /*
-      Note, programmatically setting the refine factors resets the binning flag to "BINNING_DFL"
-      BINNING_CUST is only set via function parameters, or explicitly 
+      Note, programmatically setting the refine factors resets the gridding flag to "GRIDDING_DFL"
+      GRIDDING_CUST is only set via function parameters, or explicitly 
     */
-    reset_bin_refine_scheme(options);
+    reset_grid_refine_scheme(options);
 }
 
-void set_custom_bin_refine_factors(config_options *options, const int bin_refine_factors[3]) {
-    set_bin_refine_factors(options, bin_refine_factors);
-    set_bin_refine_scheme(options, BINNING_CUST);
+void set_custom_grid_refine_factors(config_options *options, const int grid_refine_factors[3]) {
+    set_grid_refine_factors(options, grid_refine_factors);
+    set_grid_refine_scheme(options, GRIDDING_CUST);
 }
 
-void reset_bin_refine_factors(config_options *options)
+void reset_grid_refine_factors(config_options *options)
 {
     /* refine factors of 2,2,1 in the xyz dims
        seems to produce the fastest code */
-    options->bin_refine_factors[0] = 2;
-    options->bin_refine_factors[1] = 2;
-    options->bin_refine_factors[2] = 1;
-    reset_bin_refine_scheme(options);
+    options->grid_refine_factors[0] = 2;
+    options->grid_refine_factors[1] = 2;
+    options->grid_refine_factors[2] = 1;
+    reset_grid_refine_scheme(options);
 }
 
 
