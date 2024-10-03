@@ -46,16 +46,16 @@ kernel_func_ptr countpairs_driver(const config_options *options) {
     switch(options->instruction_set) {
         case FASTEST:
             // fallthrough
-        case AVX512F:
-            #ifdef HAVE_AVX512F
+        case AVX512:
+            #ifdef HAVE_AVX512
             if (avx512_available()) {
                 function = countpairs_avx512;
-                if(options->verbose) fprintf(stderr, "Using AVX512F kernel\n");
+                if(options->verbose) fprintf(stderr, "Using AVX512 kernel\n");
                 break;
             }
             #endif
             if (err_if_not_avail) {
-                sprintf(ERRMSG, "AVX512F not available\n");
+                sprintf(ERRMSG, "AVX512 not available\n");
                 return NULL;
             }
             // fallthrough

@@ -134,6 +134,6 @@ NB_MODULE(NB_NAME, m) {
         .value("FALLBACK", FALLBACK)
         .value("SSE42", SSE42)
         .value("AVX", AVX)
-        .value("AVX512", AVX512F)
+        .value("AVX512", AVX512)
         .export_values();
 }

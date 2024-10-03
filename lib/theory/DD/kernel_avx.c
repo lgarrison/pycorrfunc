@@ -145,12 +145,12 @@ int countpairs_avx(
             localw1 = w1 + j;
         }
 
-        for(;j<=(N1 - AVX_NVEC);j+=AVX_NVEC) {
-            const AVX_FLOATS m_xpos    = AVX_SET_FLOAT(xpos);
-            const AVX_FLOATS m_ypos    = AVX_SET_FLOAT(ypos);
-            const AVX_FLOATS m_zpos    = AVX_SET_FLOAT(zpos);
-            const AVX_FLOATS m_wi = AVX_SET_FLOAT(wi);
+        const AVX_FLOATS m_xpos    = AVX_SET_FLOAT(xpos);
+        const AVX_FLOATS m_ypos    = AVX_SET_FLOAT(ypos);
+        const AVX_FLOATS m_zpos    = AVX_SET_FLOAT(zpos);
+        const AVX_FLOATS m_wi = AVX_SET_FLOAT(wi);
 
+        for(;j<=(N1 - AVX_NVEC);j+=AVX_NVEC) {
             union int8 union_rbin;
             union float8 union_mDperp;
             union float8_weights union_mweight;

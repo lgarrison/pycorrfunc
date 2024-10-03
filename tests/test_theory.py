@@ -40,7 +40,6 @@ def brute_2pcf(pos, w, bin_edges, boxsize=None):
 
 
 @pytest.mark.parametrize("autocorr", [False, True], ids=["cross", "auto"])
-# @pytest.mark.parametrize("autocorr", [True], ids=["auto"])
 # @pytest.mark.parametrize("binref", [1, 2, 3], ids=["ref1", "ref2", "ref3"])
 # @pytest.mark.parametrize("maxcells", [1, 2, 3], ids=["max1", "max2", "max3"])
 @pytest.mark.parametrize(
@@ -48,9 +47,7 @@ def brute_2pcf(pos, w, bin_edges, boxsize=None):
 )
 # @pytest.mark.parametrize("funcname", ["DD", "DDrppi", "DDsmu"])
 @pytest.mark.parametrize("funcname", ["DD"])
-# NEXT: avx-512
-# @pytest.mark.parametrize("isa", ["avx512", "avx2", "sse42", "fallback"])
-@pytest.mark.parametrize("isa", ["avx", "sse42", "fallback"])
+@pytest.mark.parametrize("isa", ["avx512", "avx", "sse42", "fallback"])
 @pytest.mark.parametrize("dtype", ["f4", "f8"])
 def test_brute(
     autocorr,

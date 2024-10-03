@@ -46,12 +46,35 @@ simdinfo_double = simd.check(
 )
 simdlibs_double = simdinfo_double[0]
 
-# avx512_supported = cc.has_argument('avx512f')
-# avx512_source = []
-# if avx512_supported
-#   avx512_source += 'lib/theory/DD/kernel_avx512.c'
-#   add_project_arguments('-DHAVE_AVX512F', language: 'c')
-# endif
+# AVX512 not natively supported by meson's SIMD module,
+# implement it manually
+avx512_supported = cc.has_argument('-mavx512f') and cc.has_argument('-mavx512vl')
+if avx512_supported
+  avx512_sources = [
+    'lib/theory/DD/kernel_avx512.c',
+    'lib/common/avx512_calls.c',
+  ]
+
+  avx512lib_float = static_library(
+    'kernel_avx512_float',
+    sources : avx512_sources,
+    include_directories : inc,
+    c_args : ['-mavx512f', '-mavx512vl', '-DHAVE_AVX512'],
+  )
+
+  avx512lib_double = static_library(
+    'kernel_avx512_double',
+    sources : avx512_sources,
+    include_directories : inc,
+    c_args : ['-mavx512f', '-mavx512vl', '-DHAVE_AVX512', '-DPYCORRFUNC_USE_DOUBLE'],
+  )
+
+  simd_cdata.set('HAVE_AVX512', 1, description : 'Compiler supports avx512.')
+
+  simdlibs_float += avx512lib_float
+  simdlibs_double += avx512lib_double
+endif
+
 
 sources = [
   'lib/common/cellarray.c',

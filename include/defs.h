@@ -62,7 +62,7 @@ typedef enum {
   SSE42=6,
   AVX=7,
   AVX2=8,
-  AVX512F=9,
+  AVX512=9,
   ARM64=10
 } isa_t;
 

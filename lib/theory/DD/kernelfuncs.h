@@ -16,19 +16,19 @@ typedef int (*kernel_func_ptr)(KERNEL_ARGS);
 
 int countpairs_fallback(KERNEL_ARGS);
 
-#if defined (HAVE_SSE42)
+#ifdef HAVE_SSE42
 int sse_available(void);
 int countpairs_sse(KERNEL_ARGS);
 #endif
 
-#if defined (HAVE_AVX)
+#ifdef HAVE_AVX
 int avx_available(void);
 int countpairs_avx(KERNEL_ARGS);
 #endif
 
-//#ifdef HAVE_AVX512F
-//int avx512_available(void);
+#ifdef HAVE_AVX512
+int avx512_available(void);
 int countpairs_avx512(KERNEL_ARGS);
-//#endif
+#endif
 
 #undef KERNEL_ARGS
