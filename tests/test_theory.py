@@ -39,21 +39,36 @@ def brute_2pcf(pos, w, bin_edges, boxsize=None):
     return brutecounts, ravg, wavg
 
 
-@pytest.mark.parametrize("autocorr", [False, True], ids=["cross", "auto"])
-# @pytest.mark.parametrize("binref", [1, 2, 3], ids=["ref1", "ref2", "ref3"])
-# @pytest.mark.parametrize("maxcells", [1, 2, 3], ids=["max1", "max2", "max3"])
+@pytest.mark.parametrize('autocorr', [False, True], ids=['cross', 'auto'])
 @pytest.mark.parametrize(
-    "boxsize", [123.0, (51.0, 75.0, 123.0), None], ids=["iso", "aniso", "open"]
+    'gridref', [None, 3, [1, 2, 3]], ids=['refdef', 'ref3', 'ref123']
+)
+@pytest.mark.parametrize(
+    'maxcells', [None, 1, 2, 3], ids=['maxdef', 'max1', 'max2', 'max3']
+)
+@pytest.mark.parametrize(
+    'boxsize', [123.0, (51.0, 75.0, 123.0), None], ids=['iso', 'aniso', 'open']
 )
 # @pytest.mark.parametrize("funcname", ["DD", "DDrppi", "DDsmu"])
-@pytest.mark.parametrize("funcname", ["DD"])
-@pytest.mark.parametrize("isa", ["avx512", "avx", "sse42", "fallback"])
-@pytest.mark.parametrize("dtype", ["f4", "f8"])
-def test_brute(
+@pytest.mark.parametrize('funcname', ['DD'])
+def test_gridding(autocorr, gridref, maxcells, boxsize, funcname, isa='fastest', dtype='f4'):
+    check_brute(autocorr, gridref, maxcells, boxsize, funcname, isa, dtype)
+
+
+@pytest.mark.parametrize('autocorr', [False, True], ids=['cross', 'auto'])
+@pytest.mark.parametrize('funcname', ['DD'])
+@pytest.mark.parametrize('isa', ['avx512', 'avx', 'sse42', 'fallback'])
+@pytest.mark.parametrize('dtype', ['f4', 'f8'])
+def test_kernels(
+    funcname, isa, dtype, autocorr, gridref=None, maxcells=None, boxsize=DEFAULT_BOXSIZE
+):
+    check_brute(autocorr, gridref, maxcells, boxsize, funcname, isa, dtype)
+
+
+def check_brute(
     autocorr,
-    # binref,
-    # min_sep_opt,
-    # maxcells,
+    gridref,
+    maxcells,
     boxsize,
     funcname,
     isa,
@@ -84,23 +99,21 @@ def test_brute(
     pos = rng.random(size=(3, N), dtype=dtype) * boxsize_arr
 
     w = np.ones(N, dtype=dtype)
+    # w = rng.random(size=N, dtype=dtype)
 
     kwargs = dict(
         X1=pos[0],
         Y1=pos[1],
         Z1=pos[2],
         W1=w,
-        weight_method="pair_product",
+        weight_method='pair_product',
         bins=bin_edges,
         isa=isa,
         boxsize=boxsize,
-        # max_cells_per_dim=maxcells,
-        # xgrid_refine_factor=binref,
-        # ygrid_refine_factor=binref,
-        # zgrid_refine_factor=binref,
-        # enable_min_sep_opt=min_sep_opt,
+        max_cells=maxcells,
         dtype=dtype,
         verbose=True,
+        grid_refine=gridref,
     )
 
     if not autocorr:
@@ -113,7 +126,7 @@ def test_brute(
             )
         )
 
-    if funcname == "DDrppi":
+    if funcname == 'DDrppi':
         # # Compute rp^2 = dx^2 + dy^2, and pi = abs(dz)
         # args.insert(2, pimax)
         # sqr_rpdiff = (pdiff[:, :, :2] ** 2).sum(axis=-1).reshape(-1)
@@ -122,7 +135,7 @@ def test_brute(
         # brutecounts, _, _ = np.histogram2d(sqr_rpdiff, pidiff, bins=(bins**2, pibins))
         # brutecounts = brutecounts.reshape(-1)  # corrfunc flattened convention
         pass
-    elif funcname == "DDsmu":
+    elif funcname == 'DDsmu':
         # # Compute s^2 = dx^2 + dy^2 + dz^2, mu = |dz| / s
         # args[3:3] = (mu_max, nmu_bins)
         # sdiff = np.sqrt((pdiff**2).sum(axis=-1).reshape(-1))
@@ -132,7 +145,7 @@ def test_brute(
         # brutecounts, _, _ = np.histogram2d(sdiff, mu, bins=(bins, mubins))
         # brutecounts = brutecounts.reshape(-1)  # corrfunc flattened convention
         pass
-    elif funcname == "DD":
+    elif funcname == 'DD':
         brute_counts, brute_ravg, brute_wavg = brute_2pcf(
             pos, w, bin_edges, boxsize=boxsize
         )
@@ -144,20 +157,17 @@ def test_brute(
 
     results = func(**kwargs)
 
-    # The test that wavg == 1 is non-trivial
-    # wref = (brute_counts != 0).astype(dtype)
-
     # FUTURE We might prefer that the tolerance scale with sqrt(brute_counts) or similar
-    if dtype == "f4":
+    if dtype == 'f4':
         rtol = 1e-4
         atol = 0.0
     else:
         rtol = 1e-13
         atol = 0.0
 
-    npt.assert_equal(results["npairs"], brute_counts)
-    npt.assert_allclose(results["ravg"], brute_ravg, rtol=rtol, atol=atol)
-    npt.assert_equal(results["wavg"], brute_wavg)
+    npt.assert_equal(results['npairs'], brute_counts)
+    npt.assert_allclose(results['ravg'], brute_ravg, rtol=rtol, atol=atol)
+    npt.assert_equal(results['wavg'], brute_wavg)
 
 
 def test_isa_error():
@@ -168,11 +178,11 @@ def test_isa_error():
             Z1=np.array([0.0]),
             W1=np.array([1.0]),
             bins=np.array([0.0, 1.0]),
-            isa="not_an_isa",
+            isa='not_an_isa',
         )
 
 
-@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
 def test_one_dev(dtype):
     # make a particle at (0, 0, 0) and (1, 1, 1)
     X = np.array([0, 1], dtype=dtype)
@@ -187,5 +197,5 @@ def test_one_dev(dtype):
     result = theory.DD(X, Y, Z, bin_edges, X2=X2, Y2=Y2, Z2=Z2, boxsize=box)
     expected_npairs = np.array([4, 0])
     assert np.allclose(
-        result["npairs"], expected_npairs
+        result['npairs'], expected_npairs
     ), f"Expected {expected_npairs}, but got {result['npairs']}"

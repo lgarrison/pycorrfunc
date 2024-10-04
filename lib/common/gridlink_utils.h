@@ -4,10 +4,11 @@
 
 #include "defs.h"
 
-extern int get_gridsize(const DOUBLE xdiff,
+extern int get_gridsize(DOUBLE *xgridsize, int *nlattice,
+                                const DOUBLE xdiff,
                                 const DOUBLE xwrap,
                                 const DOUBLE rmax,
-                                const int refine_factor, const int max_ncells, DOUBLE *xgridsize, int *nlattice
+                                const int refine_factor, const int max_ncells
                                 ) __attribute__((warn_unused_result));
 
 extern void get_max_min(const int64_t ND1, const DOUBLE * restrict X1, const DOUBLE * restrict Y1, const DOUBLE * restrict Z1,

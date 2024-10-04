@@ -1,8 +1,7 @@
-import numpy as np
 import astropy.table
+import numpy as np
 
 from . import _pycorrfunc, _pycorrfuncf
-
 from .isa import _lookup_isa
 
 # import Corrfunc
@@ -28,14 +27,27 @@ def DD(
     Rmax=None,
     weight_method=None,
     verbose=False,
-    isa="fastest",
+    isa='fastest',
     dtype=np.float64,
+    **kwargs,
 ):
+    grid_refine = kwargs.pop('grid_refine', None)
+    max_cells = kwargs.pop('max_cells', None)
+
+    if kwargs:
+        raise TypeError(f'Unknown keyword arguments: {list(kwargs)}')
+    
+    if grid_refine is None:
+        grid_refine = (2, 2, 1)
+    
+    if max_cells is None:
+        max_cells = 500
+
     dtype = np.dtype(dtype)
     X1 = np.ascontiguousarray(X1, dtype=dtype)
     Y1 = np.ascontiguousarray(Y1, dtype=dtype)
     Z1 = np.ascontiguousarray(Z1, dtype=dtype)
-    
+
     if X2 is not None:
         X2 = np.ascontiguousarray(X2, dtype=dtype)
     if Y2 is not None:
@@ -55,12 +67,12 @@ def DD(
 
     if type(bins) is int:
         if Rmax is None:
-            raise ValueError("Rmax should be provided when bins is an integer")
+            raise ValueError('Rmax should be provided when bins is an integer')
         bin_edges = np.linspace(0, Rmax, bins + 1, dtype=dtype)
     else:
         bin_edges = np.ascontiguousarray(bins, dtype=dtype)
         if Rmax is not None:
-            raise ValueError("Rmax should not be provided when bins is an array")
+            raise ValueError('Rmax should not be provided when bins is an array')
 
     npairs = np.zeros(len(bin_edges) - 1, dtype=np.uint64)
     ravg = np.zeros(len(bin_edges) - 1, dtype=dtype)
@@ -91,20 +103,22 @@ def DD(
         weight_method=weight_method,
         verbose=verbose,
         isa=isa,
+        grid_refine=grid_refine,
+        max_cells=max_cells,
     )
 
     res = astropy.table.Table(
         {
-            "npairs": npairs,
-            "ravg": ravg,
-            "wavg": wavg,
+            'npairs': npairs,
+            'ravg': ravg,
+            'wavg': wavg,
         },
         meta={
-            "N1": len(X1),
-            "N2": len(X2) if X2 is not None else None,
-            "autocorr": X2 is None,
-            "weight_method": weight_method,
-            "boxsize": boxsize,
+            'N1': len(X1),
+            'N2': len(X2) if X2 is not None else None,
+            'autocorr': X2 is None,
+            'weight_method': weight_method,
+            'boxsize': boxsize,
         },
     )
 

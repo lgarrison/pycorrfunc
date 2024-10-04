@@ -125,7 +125,7 @@ typedef struct {
 
 void set_grid_refine_scheme(config_options *options, const int8_t flag);
 void reset_grid_refine_scheme(config_options *options);
-int8_t get_grid_refine_scheme(config_options *options);
+int8_t get_grid_refine_scheme(const config_options *options);
 void set_grid_refine_factors(config_options *options, const int grid_refine_factors[3]);
 void set_custom_grid_refine_factors(config_options *options, const int grid_refine_factors[3]);
 void reset_grid_refine_factors(config_options *options);

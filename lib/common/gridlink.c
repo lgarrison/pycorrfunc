@@ -51,9 +51,9 @@ cellarray *gridlink(
 
     DOUBLE xgridsize=ZERO, ygridsize=ZERO, zgridsize=ZERO;
 
-    const int xstatus = get_gridsize(xmax-xmin, xwrap, max_x_size, xgrid_refine_factor, options->max_cells_per_dim, &xgridsize, &nmesh_x);
-    const int ystatus = get_gridsize(ymax-ymin, ywrap, max_y_size, ygrid_refine_factor, options->max_cells_per_dim, &ygridsize, &nmesh_y);
-    const int zstatus = get_gridsize(zmax-zmin, zwrap, max_z_size, zgrid_refine_factor, options->max_cells_per_dim, &zgridsize, &nmesh_z);
+    const int xstatus = get_gridsize(&xgridsize, &nmesh_x, xmax-xmin, xwrap, max_x_size, xgrid_refine_factor, options->max_cells_per_dim);
+    const int ystatus = get_gridsize(&ygridsize, &nmesh_y, ymax-ymin, ywrap, max_y_size, ygrid_refine_factor, options->max_cells_per_dim);
+    const int zstatus = get_gridsize(&zgridsize, &nmesh_z, zmax-zmin, zwrap, max_z_size, zgrid_refine_factor, options->max_cells_per_dim);
     if(xstatus != EXIT_SUCCESS || ystatus != EXIT_SUCCESS || zstatus != EXIT_SUCCESS) {
       sprintf(ERRMSG,"Received xstatus = %d ystatus = %d zstatus = %d. Error\n", xstatus, ystatus, zstatus);
       return NULL;

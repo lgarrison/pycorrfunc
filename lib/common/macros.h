@@ -1,6 +1,6 @@
 #pragma once
 
-#define NLATMAX           100
+#define NCELLMAX           500
 
 #define BOOST_CELL_THRESH    10
 #define BOOST_NUMPART_THRESH 250

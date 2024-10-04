@@ -43,7 +43,7 @@ int get_config_options(config_options *options, const char *weight_method){
     options->cell_timings = NULL;
 
     /*Setup the gridding options */
-    reset_max_cells(options);
+    options->max_cells_per_dim = NCELLMAX;
     reset_grid_refine_factors(options);
     return EXIT_SUCCESS;
 }
@@ -95,7 +95,7 @@ void reset_grid_refine_scheme(config_options *options) {
     set_grid_refine_scheme(options, GRIDDING_DFL);
 }
 
-int8_t get_grid_refine_scheme(config_options *options) {
+int8_t get_grid_refine_scheme(const config_options *options) {
     // Return the last 4 bits as 8 bits int
     return (int8_t)(options->gridding_flags & GRIDDING_REF_MASK);
 }

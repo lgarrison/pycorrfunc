@@ -168,6 +168,8 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
     
     // Set the grid refine factors
     if(get_grid_refine_scheme(options) == GRIDDING_DFL) {
+        // default is 2,2,1
+        // FUTURE probably should not use rmax heuristic and stick to np
         if(rmax < 0.05*xwrap) {
             options->grid_refine_factors[0] = 1;
         }
@@ -177,10 +179,31 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         if(rmax < 0.05*zwrap) {
             options->grid_refine_factors[2] = 1;
         }
+
+        int nmesh_x, nmesh_y, nmesh_z;
+        DOUBLE gridsize[3];
+        int status = get_gridsize(&gridsize[0], &nmesh_x, xmax-xmin, xwrap, rmax, options->grid_refine_factors[0], options->max_cells_per_dim);
+        status += get_gridsize(&gridsize[1], &nmesh_y, ymax-ymin, ywrap, rmax, options->grid_refine_factors[1], options->max_cells_per_dim);
+        status += get_gridsize(&gridsize[2], &nmesh_z, zmax-zmin, zwrap, rmax, options->grid_refine_factors[2], options->max_cells_per_dim);
+
+        if(status != EXIT_SUCCESS) {
+            return EXIT_FAILURE;
+        }
+        
+        int max_nmesh = MAX(nmesh_x, MAX(nmesh_y, nmesh_z));
+        double avg_np = ((double)ND1)/(nmesh_x*nmesh_y*nmesh_z);
+        
+        // Use the old heuristic of boosting the first two grid refs if the average number of particles per cell is too high
+        // FUTURE lots of ways to improve this!
+        if(avg_np >= 256 || max_nmesh <= 10) {
+            for(int i=0;i<2;i++) {
+                if(gridsize[i] <= 0.) continue;
+                options->grid_refine_factors[i]++;
+            }
+        }
     }
 
     // Divide the particles into cells
-    
     cellarray *lattice1 = gridlink(
         ND1, X1, Y1, Z1, W1,
         xmin, xmax, ymin, ymax, zmin, zmax,
@@ -191,50 +214,10 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         options->grid_refine_factors[2],
         sort_on_z,
         options
-        );
+    );
 
     if(lattice1 == NULL) {
         return EXIT_FAILURE;
-    }
-
-    /* If there too few cells (BOOST_CELL_THRESH is ~10), and the number of cells can be increased, then boost grid refine factor by ~1*/
-    // TODO: don't regrid!! Compute these stats beforehand.
-    const double avg_np = ((double)ND1)/(lattice1->nmesh_x*lattice1->nmesh_y*lattice1->nmesh_z);
-    const int max_nmesh = fmax(lattice1->nmesh_x, fmax(lattice1->nmesh_y, lattice1->nmesh_z));
-    if((max_nmesh <= BOOST_CELL_THRESH || avg_np >= BOOST_NUMPART_THRESH)
-       && max_nmesh < options->max_cells_per_dim) {
-        if(options->verbose) {
-            fprintf(stderr,"%s> gridlink seems inefficient. nmesh = (%d, %d, %d); avg_np = %.3g. ", __FUNCTION__, lattice1->nmesh_x, lattice1->nmesh_y, lattice1->nmesh_z, avg_np);
-        }
-        if(get_grid_refine_scheme(options) == GRIDDING_DFL) {
-            if(options->verbose) {
-                fprintf(stderr,"Boosting grid refine factor - should lead to better performance\n");
-                fprintf(stderr,"xmin = %lf xmax=%lf rmax = %lf\n", xmin, xmax, rmax);
-            }
-            free_cellarray(&lattice1);
-            // Only boost the first two dimensions.  Prevents excessive refinement.
-            for(int i=0;i<2;i++) {
-                options->grid_refine_factors[i] += BOOST_BIN_REF;
-            }
-            lattice1 = gridlink(
-                ND1, X1, Y1, Z1, W1,
-                xmin, xmax, ymin, ymax, zmin, zmax,
-                rmax, rmax, rmax,
-                xwrap, ywrap, zwrap,
-                options->grid_refine_factors[0], options->grid_refine_factors[1], options->grid_refine_factors[2],
-                sort_on_z,
-                options);
-            if(lattice1 == NULL) {
-                free_cellarray(&lattice1);
-                return EXIT_FAILURE;
-            }
-        } else {
-            if(options->verbose) {
-                fprintf(stderr,"Boosting grid refine factor could have helped. However, since custom grid refine factors "
-                        "= (%d, %d, %d) are being used - continuing with inefficient mesh\n", options->grid_refine_factors[0],
-                        options->grid_refine_factors[1], options->grid_refine_factors[2]);
-            }
-        }
     }
 
     cellarray *lattice2 = NULL;

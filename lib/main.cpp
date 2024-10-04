@@ -1,4 +1,6 @@
+#include <array>
 #include <optional>
+#include <variant>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -6,8 +8,10 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
+#include <nanobind/stl/array.h>
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/variant.h>
 
 extern "C" {
     #include "theory/DD/countpairs.h"
@@ -45,8 +49,9 @@ void countpairs_wrapper(
     std::optional<nb::ndarray<const DOUBLE, nb::ndim<1>, nb::device::cpu>> boxsize,
     std::optional<const std::string> weight_method,
     bool verbose,
-    isa_t isa
-    // grid_refine_factors
+    isa_t isa,
+    std::variant<int, std::array<int,3>> grid_refine,
+    int max_cells
     ) {
 
     if (num_threads < 1) {
@@ -74,6 +79,21 @@ void countpairs_wrapper(
     options.autocorr = !X2.has_value();
     options.verbose = verbose;
     options.instruction_set = isa;
+    options.max_cells_per_dim = max_cells;
+    
+    std::visit([&options](auto&& arg) {
+        if constexpr (std::is_same_v<int, std::decay_t<decltype(arg)>>) {
+            for(int i=0; i<3; i++) {
+                options.grid_refine_factors[i] = arg;
+            }
+        } else {
+            auto arr = arg;
+            for(int i=0; i<3; i++) {
+                options.grid_refine_factors[i] = arr[i];
+            }
+        }
+        set_grid_refine_scheme(&options, GRIDDING_CUST);
+    }, grid_refine);
 
     int64_t ND1 = X1.shape(0);
     int64_t ND2 = X2.has_value() ? X2->shape(0) : 0;
@@ -126,7 +146,9 @@ NB_MODULE(NB_NAME, m) {
         "boxsize"_a.noconvert().none(),
         "weight_method"_a.noconvert().none(),
         "verbose"_a.noconvert(),
-        "isa"_a.noconvert()
+        "isa"_a.noconvert(),
+        "grid_refine"_a.noconvert(),
+        "max_cells"_a.noconvert()
     );
 
     nb::enum_<isa_t>(m, "isa_t")
