@@ -129,8 +129,6 @@ int8_t get_grid_refine_scheme(const config_options *options);
 void set_grid_refine_factors(config_options *options, const int grid_refine_factors[3]);
 void set_custom_grid_refine_factors(config_options *options, const int grid_refine_factors[3]);
 void reset_grid_refine_factors(config_options *options);
-void set_max_cells(config_options *options, const int max);
-void reset_max_cells(config_options *options);
 
 int get_config_options(config_options *options, const char *weight_method);
 

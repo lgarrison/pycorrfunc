@@ -131,26 +131,3 @@ void reset_grid_refine_factors(config_options *options)
     options->grid_refine_factors[2] = 1;
     reset_grid_refine_scheme(options);
 }
-
-
-void set_max_cells(config_options *options, const int max)
-{
-    if(max <=0) {
-        fprintf(stderr,"Warning: Max. cells per dimension was requested to be set to "
-                "a negative number = %d...returning\n", max);
-        return;
-    }
-
-    if(max > INT16_MAX) {
-        fprintf(stderr,"Warning: Max cells per dimension is a 2-byte integer and can not "
-                "hold supplied value of %d. Max. allowed value for max_cells_per_dim is %d\n",
-                max, INT16_MAX);
-    }
-
-    options->max_cells_per_dim = max;
-}
-
-void reset_max_cells(config_options *options)
-{
-    options->max_cells_per_dim = NLATMAX;
-}
