@@ -34,7 +34,7 @@ sse_weight_func_t get_sse_weight_func_by_method(const weight_method_t method){
 }
 
 int countpairs_sse(
-    uint64_t *restrict src_npairs, DOUBLE *restrict src_ravg, DOUBLE *restrict src_wavg,
+    uint64_t *restrict src_npairs, DoubleAccum *restrict src_ravg, DoubleAccum *restrict src_wavg,
     const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, DOUBLE *w0,
     const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, DOUBLE *w1,
     const int same_cell,

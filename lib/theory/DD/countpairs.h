@@ -10,6 +10,6 @@ int countpairs(
     const int64_t N_bin_edges, const DOUBLE *bin_edges,
     config_options *options,
     uint64_t *npairs,
-    DOUBLE *ravg,
-    DOUBLE *wavg
+    DoubleAccum *ravg,
+    DoubleAccum *wavg
 );

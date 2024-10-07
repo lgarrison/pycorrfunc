@@ -11,6 +11,8 @@ def brute_2pcf(pos, w, bin_edges, boxsize=None):
     """
     Brute-force calculation of 2-point correlation function.
     """
+    accum_dtype = np.float64
+
     pdiff = np.abs(pos[:, :, np.newaxis] - pos[:, np.newaxis])
     if boxsize is not None:
         boxsize = np.atleast_2d(boxsize).T
@@ -24,14 +26,14 @@ def brute_2pcf(pos, w, bin_edges, boxsize=None):
     # and compute ravg of pairs in each bin
     ibin = np.digitize(r2, bins=bin_edges**2) - 1
     r = np.sqrt(r2)
-    ravg = np.zeros(len(bin_edges), dtype=np.float64)
+    ravg = np.zeros(len(bin_edges), dtype=accum_dtype)
     np.add.at(ravg, ibin, r)
     ravg = ravg[:-1]  # oversized by 1 for overflow
     ravg[mask] /= brutecounts[mask]
 
     # and compute wavg of pairs in each bin
     pairw = (w[:, np.newaxis] * w).reshape(-1)
-    wavg = np.zeros(len(bin_edges), dtype=np.float64)
+    wavg = np.zeros(len(bin_edges), dtype=accum_dtype)
     np.add.at(wavg, ibin, pairw)
     wavg = wavg[:-1]
     wavg[mask] /= brutecounts[mask]
@@ -65,6 +67,43 @@ def test_kernels(
     check_brute(autocorr, gridref, maxcells, boxsize, funcname, isa, dtype)
 
 
+def test_accum_prec(N=100_000):
+    """
+    pycorrfunc uses double-precision accumulators for the weights and ravg to avoid
+    loss of precision. This test exercises that by generating enough pair counts to
+    see some loss of precision if the wavg accumulator is single-precision.
+    """
+    dtype = 'f4'
+    boxsize = 1.
+
+    rng = np.random.default_rng(1237)
+    boxsize_arr = np.atleast_2d(boxsize).T
+    bin_edges = np.linspace(0.01, 0.49 * boxsize_arr.min(), 20)
+
+    pos = rng.random(size=(3, N), dtype=dtype)
+    pos *= boxsize_arr
+
+    w = np.ones(N, dtype=dtype)
+    # w = rng.random(size=N, dtype=dtype)
+
+    kwargs = dict(
+        X1=pos[0],
+        Y1=pos[1],
+        Z1=pos[2],
+        W1=w,
+        weight_method='pair_product',
+        bins=bin_edges,
+        boxsize=boxsize,
+        dtype=dtype,
+        verbose=True,
+        do_ravg=True,
+    )
+
+    results = theory.DD(**kwargs)
+
+    npt.assert_equal(results['wavg'], 1.)
+
+
 def check_brute(
     autocorr,
     gridref,
@@ -96,7 +135,8 @@ def check_brute(
     # nmu_bins = 10
     func = getattr(theory, funcname)
 
-    pos = rng.random(size=(3, N), dtype=dtype) * boxsize_arr
+    pos = rng.random(size=(3, N), dtype=dtype)
+    pos *= boxsize_arr
 
     w = np.ones(N, dtype=dtype)
     # w = rng.random(size=N, dtype=dtype)

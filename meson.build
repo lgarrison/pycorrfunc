@@ -18,6 +18,11 @@ py = import('python').find_installation(pure: false)
 nanobind_dep = dependency('nanobind', static: true)
 openmp_dep = dependency('openmp', language: 'c', required: get_option('openmp'))
 
+if get_option('double_accum').enabled()
+  add_project_arguments('-DPYCORRFUNC_USE_DOUBLEACCUM', language: 'c')
+  add_project_arguments('-DPYCORRFUNC_USE_DOUBLEACCUM', language: 'cpp')
+endif
+
 simd = import('unstable-simd')
 
 cc = meson.get_compiler('c')

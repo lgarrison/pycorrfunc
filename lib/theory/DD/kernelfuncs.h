@@ -2,7 +2,7 @@
 
 #include <simdconfig.h>
 
-#define KERNEL_ARGS uint64_t *src_npairs, DOUBLE *src_rpavg, DOUBLE *src_wavg, \
+#define KERNEL_ARGS uint64_t *src_npairs, DoubleAccum *src_ravg, DoubleAccum *src_wavg, \
                    const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, DOUBLE *w0, \
                    const int64_t N1, DOUBLE *x1, DOUBLE *y1, DOUBLE *z1, DOUBLE *w1, \
                    const int same_cell, \

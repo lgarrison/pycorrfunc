@@ -164,4 +164,6 @@ NB_MODULE(NB_NAME, m) {
         .value("AVX", AVX)
         .value("AVX512", AVX512)
         .export_values();
+
+    m.attr("sizeof_DoubleAccum") = sizeof(DoubleAccum);
 }

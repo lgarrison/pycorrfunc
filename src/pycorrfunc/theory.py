@@ -33,6 +33,7 @@ def DD(
 ):
     grid_refine = kwargs.pop('grid_refine', None)
     max_cells = kwargs.pop('max_cells', None)
+    accum_dtype = kwargs.pop('accum_dtype', None)
 
     if kwargs:
         raise TypeError(f'Unknown keyword arguments: {list(kwargs)}')
@@ -49,6 +50,9 @@ def DD(
         module = _pycorrfuncf
     else:
         raise ValueError(f'Unsupported dtype: {dtype}')
+
+    if accum_dtype is None:
+        accum_dtype = np.float64 if module.sizeof_DoubleAccum == 8 else np.float32
 
     X1 = np.ascontiguousarray(X1, dtype=dtype)
     Y1 = np.ascontiguousarray(Y1, dtype=dtype)

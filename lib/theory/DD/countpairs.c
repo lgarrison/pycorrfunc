@@ -102,8 +102,8 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
                const int64_t N_bin_edges, const DOUBLE *bin_edges,
                config_options *options,
                uint64_t *npairs,
-               DOUBLE *rpavg,
-               DOUBLE *wavg){
+               DoubleAccum *ravg,
+               DoubleAccum *wavg){
 
     const int need_wavg = options->weight_method != NONE;
     const int sort_on_z = 1;
@@ -285,8 +285,8 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
     }
 
     uint64_t *local_npairs[options->numthreads];
-    DOUBLE *local_rpavg[options->numthreads];
-    DOUBLE *local_wavg[options->numthreads];
+    DoubleAccum *local_ravg[options->numthreads];
+    DoubleAccum *local_wavg[options->numthreads];
 
 #ifdef _OPENMP
     #pragma omp parallel num_threads(options->numthreads)
@@ -349,8 +349,8 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         struct cell_pair *this_cell_pair = &all_cell_pairs[icellpair];
 
         uint64_t *this_npairs = local_npairs[tid];
-        DOUBLE *this_rpavg = local_rpavg[tid];
-        DOUBLE *this_wavg = local_wavg[tid];
+        DoubleAccum *this_ravg = local_ravg[tid];
+        DoubleAccum *this_wavg = local_wavg[tid];
 
         const int64_t icell = this_cell_pair->cellindex1;
         const int64_t icell2 = this_cell_pair->cellindex2;
@@ -461,10 +461,10 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
     for(int i=0;i<N_bin_edges - 1;i++) {
         if(npairs[i] > 0) {
             if(options->need_avg_sep) {
-                rpavg[i] /= (DOUBLE) npairs[i] ;
+                ravg[i] /= (DoubleAccum) npairs[i];
             }
             if(need_wavg) {
-                wavg[i] /= (DOUBLE) npairs[i];
+                wavg[i] /= (DoubleAccum) npairs[i];
             }
         }
     }    

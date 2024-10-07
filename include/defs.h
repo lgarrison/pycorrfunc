@@ -14,6 +14,13 @@ typedef double DOUBLE;
 typedef float DOUBLE;
 #endif
 
+#ifdef PYCORRFUNC_USE_DOUBLEACCUM
+typedef double DoubleAccum;
+#else
+// otherwise default to native
+typedef DOUBLE DoubleAccum;
+#endif
+
 extern char ERRMSG[1024];
 
 #include "macros.h"
