@@ -271,7 +271,7 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
     for (int i = 0; i < N_bin_edges - 1; i++) {
         npairs[i] = 0;
         if (options->need_avg_sep) {
-            rpavg[i] = 0.0; 
+            ravg[i] = 0.0; 
         }
         if (need_wavg) {
             wavg[i] = 0.0;
@@ -362,7 +362,7 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         int64_t j = lattice2->offsets[icell2];
 
         countpairs_function(
-            this_npairs, this_rpavg, this_wavg,
+            this_npairs, this_ravg, this_wavg,
             first_N, lattice1->X + i, lattice1->Y + i, lattice1->Z + i, lattice1->W + i,
             second_N, lattice2->X + j, lattice2->Y + j, lattice2->Z + j, lattice2->W + j,
             this_cell_pair->same_cell,
@@ -424,12 +424,12 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
     }
 
     //The code does not double count for autocorrelations
-    //which means the npairs and rpavg values need to be doubled;
+    //which means the npairs and ravg values need to be doubled;
     if(options->autocorr == 1) {
         for(int i=0;i<N_bin_edges - 1;i++) {
             npairs[i] *= 2;
             if(options->need_avg_sep) {
-                rpavg[i] *= (DOUBLE) 2.0;
+                ravg[i] *= (DOUBLE) 2.0;
             }
             if(need_wavg) {
                 wavg[i] *= (DOUBLE) 2.0;
@@ -445,8 +445,8 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
                produces the same result as the auto-correlation  */
             npairs[0] += ND1;
 
-            // Increasing npairs affects rpavg and wavg.
-            // We don't need to add anything to rpavg; all the self-pairs have 0 separation!
+            // Increasing npairs affects ravg and wavg.
+            // We don't need to add anything to ravg; all the self-pairs have 0 separation!
             // The self-pairs have non-zero weight, though.  So, fix that here.
             if(need_wavg){
                 // Keep in mind this is an autocorrelation (i.e. only one particle set to consider)

@@ -114,6 +114,7 @@ def check_brute(
         dtype=dtype,
         verbose=True,
         grid_refine=gridref,
+        do_ravg=True,
     )
 
     if not autocorr:

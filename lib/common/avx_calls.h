@@ -191,7 +191,7 @@ static inline AVX_FLOATS inv_cosine_avx(const AVX_FLOATS X, const int order)
 #endif
   
   //The three different unions used
-  //for computing rpavg and weightavg
+  //for computing ravg and weightavg
   union int8 {
     AVX_INTS m_ibin;
     int ibin[AVX_NVEC];

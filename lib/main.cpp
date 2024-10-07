@@ -43,14 +43,14 @@ void countpairs_wrapper(
     std::optional<array_t<DOUBLE>> W2,
     array_t<const DOUBLE> bin_edges,
     array_t<uint64_t> npairs,
-    array_t<DOUBLE> ravg,
-    array_t<DOUBLE> wavg,
+    std::optional<array_t<DoubleAccum>> ravg,
+    std::optional<array_t<DoubleAccum>> wavg,
     int num_threads,
     std::optional<nb::ndarray<const DOUBLE, nb::ndim<1>, nb::device::cpu>> boxsize,
     std::optional<const std::string> weight_method,
     bool verbose,
     isa_t isa,
-    std::variant<int, std::array<int,3>> grid_refine,
+    std::optional<std::variant<int, std::array<int,3>>> grid_refine,
     int max_cells
     ) {
 
@@ -80,20 +80,23 @@ void countpairs_wrapper(
     options.verbose = verbose;
     options.instruction_set = isa;
     options.max_cells_per_dim = max_cells;
+    options.need_avg_sep = ravg.has_value();
     
-    std::visit([&options](auto&& arg) {
-        if constexpr (std::is_same_v<int, std::decay_t<decltype(arg)>>) {
-            for(int i=0; i<3; i++) {
-                options.grid_refine_factors[i] = arg;
+    if(grid_refine.has_value()) {
+        std::visit([&options](auto&& arg) {
+            if constexpr (std::is_same_v<int, std::decay_t<decltype(arg)>>) {
+                for(int i=0; i<3; i++) {
+                    options.grid_refine_factors[i] = arg;
+                }
+            } else {
+                auto arr = arg;
+                for(int i=0; i<3; i++) {
+                    options.grid_refine_factors[i] = arr[i];
+                }
             }
-        } else {
-            auto arr = arg;
-            for(int i=0; i<3; i++) {
-                options.grid_refine_factors[i] = arr[i];
-            }
-        }
-        set_grid_refine_scheme(&options, GRIDDING_CUST);
-    }, grid_refine);
+            set_grid_refine_scheme(&options, GRIDDING_CUST);  // TODO
+        }, grid_refine.value());
+    }
 
     int64_t ND1 = X1.shape(0);
     int64_t ND2 = X2.has_value() ? X2->shape(0) : 0;
@@ -105,6 +108,9 @@ void countpairs_wrapper(
     DOUBLE *Z2_ptr = Z2.has_value() ? Z2->data() : nullptr;
     DOUBLE *W2_ptr = W2.has_value() ? W2->data() : nullptr;
 
+    DoubleAccum *ravg_ptr = ravg.has_value() ? ravg->data() : nullptr;
+    DoubleAccum *wavg_ptr = wavg.has_value() ? wavg->data() : nullptr;
+
     int status = countpairs(
         ND1,
         X1.data(), Y1.data(), Z1.data(), W1_ptr,
@@ -114,8 +120,8 @@ void countpairs_wrapper(
         bin_edges.data(), 
         &options,
         npairs.data(),
-        ravg.data(),
-        wavg.data()
+        ravg_ptr,
+        wavg_ptr
     );
 
     if(status != EXIT_SUCCESS) {
@@ -140,14 +146,14 @@ NB_MODULE(NB_NAME, m) {
         "W2"_a.noconvert().none(),
         "bin_edges"_a.noconvert(),
         "npairs"_a.noconvert(),
-        "ravg"_a.noconvert(),
-        "wavg"_a.noconvert(),
+        "ravg"_a.noconvert().none(),
+        "wavg"_a.noconvert().none(),
         "num_threads"_a.noconvert(),
         "boxsize"_a.noconvert().none(),
         "weight_method"_a.noconvert().none(),
         "verbose"_a.noconvert(),
         "isa"_a.noconvert(),
-        "grid_refine"_a.noconvert(),
+        "grid_refine"_a.noconvert().none(),
         "max_cells"_a.noconvert()
     );
 

@@ -16,19 +16,10 @@
 #include <immintrin.h>
 #include <cpuid.h>
 
-#ifdef __APPLE__
-/*
- * Apple ships a broken __builtin_cpu_supports and
- * some machines in the CI farm seem to be too
- * old to have AVX so just always return 0 here.
- */
-int avx_available(void) { return 0; }
-#else
 
 int avx_available(void) {
     return __builtin_cpu_supports("avx");
 }
-#endif
 
 static inline AVX_FLOATS avx_pair_product(AVX_FLOATS, AVX_FLOATS, AVX_FLOATS, AVX_FLOATS w0, AVX_FLOATS w1){
     return AVX_MULTIPLY_FLOATS(w0, w1);

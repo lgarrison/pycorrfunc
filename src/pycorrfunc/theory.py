@@ -1,7 +1,6 @@
 import astropy.table
 import numpy as np
 
-from . import _pycorrfunc, _pycorrfuncf
 from .isa import _lookup_isa
 
 # import Corrfunc
@@ -28,6 +27,7 @@ def DD(
     weight_method=None,
     verbose=False,
     isa='fastest',
+    do_ravg=False,
     dtype=np.float64,
     **kwargs,
 ):
@@ -37,13 +37,19 @@ def DD(
     if kwargs:
         raise TypeError(f'Unknown keyword arguments: {list(kwargs)}')
     
-    if grid_refine is None:
-        grid_refine = (2, 2, 1)
-    
     if max_cells is None:
         max_cells = 500
 
     dtype = np.dtype(dtype)
+    if dtype.type == np.float64:
+        from . import _pycorrfunc
+        module = _pycorrfunc
+    elif dtype.type == np.float32:
+        from . import _pycorrfuncf
+        module = _pycorrfuncf
+    else:
+        raise ValueError(f'Unsupported dtype: {dtype}')
+
     X1 = np.ascontiguousarray(X1, dtype=dtype)
     Y1 = np.ascontiguousarray(Y1, dtype=dtype)
     Z1 = np.ascontiguousarray(Z1, dtype=dtype)
@@ -75,10 +81,14 @@ def DD(
             raise ValueError('Rmax should not be provided when bins is an array')
 
     npairs = np.zeros(len(bin_edges) - 1, dtype=np.uint64)
-    ravg = np.zeros(len(bin_edges) - 1, dtype=dtype)
-    wavg = np.zeros(len(bin_edges) - 1, dtype=dtype)
-
-    module = {np.float32: _pycorrfuncf, np.float64: _pycorrfunc}[dtype.type]
+    if do_ravg:
+        ravg = np.zeros(len(bin_edges) - 1, dtype=accum_dtype)
+    else:
+        ravg = None
+    if W1 is not None:
+        wavg = np.zeros(len(bin_edges) - 1, dtype=accum_dtype)
+    else:
+        wavg = None
 
     if num_threads is None:
         num_threads = 0
@@ -110,8 +120,6 @@ def DD(
     res = astropy.table.Table(
         {
             'npairs': npairs,
-            'ravg': ravg,
-            'wavg': wavg,
         },
         meta={
             'N1': len(X1),
@@ -119,7 +127,17 @@ def DD(
             'autocorr': X2 is None,
             'weight_method': weight_method,
             'boxsize': boxsize,
+            'isa': isa,
+            'num_threads': num_threads,
+            'dtype': dtype,
+            'accum_dtype': accum_dtype
         },
+        copy=False,
     )
+
+    if do_ravg:
+        res['ravg'] = ravg
+    if W1 is not None:
+        res['wavg'] = wavg
 
     return res
