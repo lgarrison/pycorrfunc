@@ -113,10 +113,10 @@ int countpairs_fallback(
                     src_npairs[kbin]++;
                     
                     if(src_ravg != NULL) {
-                        src_ravg[kbin] += SQRT(r2);
+                        src_ravg[kbin + 1] += SQRT(r2);
                     }
                     if(weight_method != NONE){
-                        src_wavg[kbin] += pairweight;
+                        src_wavg[kbin + 1] += pairweight;
                     }
                     break;
                 }

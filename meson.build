@@ -29,6 +29,8 @@ cc = meson.get_compiler('c')
 
 inc = include_directories('include', 'lib/theory/DD', 'lib/common', 'tests')
 
+extra_args = ['-funroll-loops']
+
 simd_check_kwargs = {
   'sse42' : 'lib/theory/DD/kernel_sse42.c',
   'avx' : 'lib/theory/DD/kernel_avx.c',
@@ -39,7 +41,8 @@ simd_check_kwargs = {
 simd_cdata = configuration_data()
 simdinfo_float = simd.check(
   'kernels_float',
-  kwargs : simd_check_kwargs
+  kwargs : simd_check_kwargs,
+  c_args : extra_args
 )
 simdlibs_float = simdinfo_float[0]
 simd_cdata.merge_from(simdinfo_float[1])
@@ -47,7 +50,7 @@ simd_cdata.merge_from(simdinfo_float[1])
 simdinfo_double = simd.check(
   'kernels_double',
   kwargs : simd_check_kwargs,
-  c_args : ['-DPYCORRFUNC_USE_DOUBLE'],
+  c_args : ['-DPYCORRFUNC_USE_DOUBLE'] + extra_args,
 )
 simdlibs_double = simdinfo_double[0]
 
@@ -64,14 +67,14 @@ if avx512_supported
     'kernel_avx512_float',
     sources : avx512_sources,
     include_directories : inc,
-    c_args : ['-mavx512f', '-mavx512vl', '-DHAVE_AVX512'],
+    c_args : ['-mavx512f', '-mavx512vl', '-DHAVE_AVX512'] + extra_args,
   )
 
   avx512lib_double = static_library(
     'kernel_avx512_double',
     sources : avx512_sources,
     include_directories : inc,
-    c_args : ['-mavx512f', '-mavx512vl', '-DHAVE_AVX512', '-DPYCORRFUNC_USE_DOUBLE'],
+    c_args : ['-mavx512f', '-mavx512vl', '-DHAVE_AVX512', '-DPYCORRFUNC_USE_DOUBLE'] + extra_args,
   )
 
   simd_cdata.set('HAVE_AVX512', 1, description : 'Compiler supports avx512.')
@@ -108,16 +111,16 @@ pycorrfunc_double = py.extension_module(
   '_pycorrfunc',
   kwargs : extension_kwargs,
   link_with : simdlibs_double,
-  c_args : ['-DPYCORRFUNC_USE_DOUBLE', '-DNB_DOMAIN=d'],
-  cpp_args : ['-DPYCORRFUNC_USE_DOUBLE', '-DNB_DOMAIN=d'],
+  c_args : ['-DPYCORRFUNC_USE_DOUBLE', '-DNB_DOMAIN=d'] + extra_args,
+  cpp_args : ['-DPYCORRFUNC_USE_DOUBLE', '-DNB_DOMAIN=d'] + extra_args,
 )
 
 pycorrfunc_float = py.extension_module(
   '_pycorrfuncf',
   kwargs : extension_kwargs,
   link_with : simdlibs_float,
-  c_args : ['-DNB_DOMAIN=f'],
-  cpp_args : ['-DNB_DOMAIN=f'],
+  c_args : ['-DNB_DOMAIN=f'] + extra_args,
+  cpp_args : ['-DNB_DOMAIN=f'] + extra_args,
 )
 
 # N.B. simdconfig.h is precision independent, so we'll just use the cdata from float

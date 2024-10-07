@@ -241,14 +241,13 @@ int countpairs_avx(
                 PRAGMA_UNROLL(AVX_NVEC)
                 for(int jj=0;jj<AVX_NVEC;jj++) {
                     const int kbin = union_rbin.ibin[jj];
-                    if (kbin == 0) continue;
                     if(need_ravg){
                         const DOUBLE r = union_mDperp.Dperp[jj];
-                        src_ravg[kbin - 1] += r;
+                        src_ravg[kbin] += r;
                     }
                     if(need_wavg){
                         const DOUBLE weight = union_mweight.weights[jj];
-                        src_wavg[kbin - 1] += weight;
+                        src_wavg[kbin] += weight;
                     }
                 }
             }
@@ -280,10 +279,10 @@ int countpairs_avx(
                 if(r2 >= bin_edges_sqr[kbin]) {
                     src_npairs[kbin]++;
                     if(need_ravg) {
-                        src_ravg[kbin] += r;
+                        src_ravg[kbin + 1] += r;
                     }
                     if(need_wavg){
-                        src_wavg[kbin] += pairweight;
+                        src_wavg[kbin + 1] += pairweight;
                     }
                     break;
                 }

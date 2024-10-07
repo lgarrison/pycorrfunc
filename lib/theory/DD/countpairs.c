@@ -290,31 +290,33 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
 
 #ifdef _OPENMP
     #pragma omp parallel num_threads(options->numthreads)
+#endif
     {
+
         const int tid = omp_get_thread_num();
+#ifdef _OPENMP
         local_npairs[tid] = (uint64_t *) my_malloc(sizeof(uint64_t), N_bin_edges - 1);
+#else
+        local_npairs[tid] = npairs;
+#endif
+
         memset(local_npairs[tid], 0, sizeof(uint64_t) * (N_bin_edges - 1));
 
-        local_rpavg[tid] = options->need_avg_sep ? 
-            (DOUBLE *) my_malloc(sizeof(DOUBLE), N_bin_edges - 1) :
+        // oversized by 1 so we can write branchless code
+        local_ravg[tid] = options->need_avg_sep ? 
+            (DoubleAccum *) my_malloc(sizeof(DoubleAccum), N_bin_edges) :
             NULL;
-        if (local_rpavg[tid] != NULL) {
-            memset(local_rpavg[tid], 0, sizeof(DOUBLE) * (N_bin_edges - 1));
+        if (local_ravg[tid] != NULL) {
+            memset(local_ravg[tid], 0, sizeof(DoubleAccum) * N_bin_edges);
         }
 
         local_wavg[tid] = need_wavg ? 
-            (DOUBLE *) my_malloc(sizeof(DOUBLE), N_bin_edges - 1) :
+            (DoubleAccum *) my_malloc(sizeof(DoubleAccum), N_bin_edges) :
             NULL;
         if (local_wavg[tid] != NULL) {
-            memset(local_wavg[tid], 0, sizeof(DOUBLE) * (N_bin_edges - 1));
+            memset(local_wavg[tid], 0, sizeof(DoubleAccum) * N_bin_edges);
         }
     }
-#else
-    int tid = 0;
-    local_npairs[tid] = npairs;
-    local_rpavg[tid] = options->need_avg_sep ? rpavg : NULL;
-    local_wavg[tid] = need_wavg ? wavg : NULL;
-#endif
 
     // For Ctrl-C handling
     int interrupted = 0;
@@ -385,39 +387,47 @@ int countpairs(const int64_t ND1, DOUBLE *X1, DOUBLE *Y1, DOUBLE *Z1, DOUBLE *W1
         return EXIT_FAILURE;  // never reached
     }
 
-#ifdef _OPENMP
-    // Only reduce for OpenMP. Without it, the local_npairs are the same as npairs.
-
     // We can *almost* use OpenMP's reduction clause instead of doing the following, but
     // (1) there's not an elegant way to toggle the ravg and wavg reductions on and off;
     // (2) there's no way to parallelize the reductions (only relevant for big N_bin_edges);
     // (3) reductions live on the stack, and I'm not sure we want to rely on that for large arrays.
 
+#ifdef _OPENMP
     #pragma omp parallel num_threads(options->numthreads)
+#endif
     {
+        #ifdef _OPENMP
         #pragma omp for schedule(static,CACHELINE/sizeof(int64_t))
-        for(int j=0;j<N_bin_edges - 1;j++) {
+        #endif
+        for(int j=0;j<N_bin_edges-1;j++) {
             for(int i=0;i<options->numthreads;i++) {
+                #ifdef _OPENMP
                 npairs[j] += local_npairs[i][j];
+                #endif
+                
                 if(options->need_avg_sep) {
-                    rpavg[j] += local_rpavg[i][j];
+                    // first bin of local_ravg is scratch
+                    ravg[j] += local_ravg[i][j + 1];
                 }
                 if(need_wavg) {
-                    wavg[j] += local_wavg[i][j];
+                    wavg[j] += local_wavg[i][j + 1];
                 }
             }
         }
 
         const int tid = omp_get_thread_num();
+        
+        #ifdef _OPENMP
         free(local_npairs[tid]);
+        #endif
+
         if(options->need_avg_sep) {
-            free(local_rpavg[tid]);
+            free(local_ravg[tid]);
         }
         if(need_wavg) {
             free(local_wavg[tid]);
         }
     }
-#endif
 
     if(options->verbose) {
         finish_myprogressbar();
