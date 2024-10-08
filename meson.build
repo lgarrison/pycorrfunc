@@ -9,7 +9,7 @@ project(
         'cpp_std=c++17',
         # 'b_sanitize=address,undefined',
         'warning_level=2',
-        'werror=true',  # TODO: move to CI
+        # 'werror=true',
         # 'openmp=disabled',
     ],
 )

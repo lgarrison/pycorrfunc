@@ -1,2 +1,2 @@
 option('openmp', type : 'feature', value : 'enabled')
-option('double_accum', type : 'feature', value : 'disabled', description : 'Whether to use double precision floats for the ravg and wavg accumulators even in the single precision module')
+option('double_accum', type : 'feature', value : 'enabled', description : 'Whether to use double precision floats for the ravg and wavg accumulators even in the single precision module')
