@@ -2,6 +2,8 @@
 
 #include <simdconfig.h>
 
+#include "defs.h"
+
 #define KERNEL_ARGS                                                            \
     uint64_t *src_npairs, DoubleAccum *src_ravg, DoubleAccum *src_wavg,        \
        const int64_t N0, DOUBLE *x0, DOUBLE *y0, DOUBLE *z0, DOUBLE *w0,       \
