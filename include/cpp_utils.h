@@ -4,11 +4,9 @@
 
 #include "defs.h"
 
-#ifdef __cpp_lib_hardware_interference_size
-static const size_t CACHELINE = std::hardware_destructive_interference_size;
-#else
+// This is currently not used for anything critical, so we can just use a
+// reasonable default value.
 static const size_t CACHELINE = 64;
-#endif
 
 void raise_python_exception();
 void raise_RuntimeError(const char *msg);
