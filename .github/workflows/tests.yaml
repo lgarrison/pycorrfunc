@@ -39,6 +39,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Install Clang with OpenMP support
+      if: ${{ matrix.compiler == 'clang' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang libomp-dev
+
     - name: Set Compiler Environment
       run: |
         if [ "${{ matrix.compiler }}" == "gcc" ]; then
