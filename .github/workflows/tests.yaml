@@ -65,6 +65,6 @@ jobs:
           -Ccompile-args="--verbose" \
           .[test]
 
-    - name: Run tests
+    - name: Run tests (no AVX512)
       run: |
-        pytest -v
+        pytest -v -k 'not avx512'
