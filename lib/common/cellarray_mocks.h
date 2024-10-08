@@ -12,12 +12,13 @@ typedef struct {
     DOUBLE ybounds[2];
     DOUBLE zbounds[2];
 
-    //these two fields are only relevant for angular calculations
+    // these two fields are only relevant for angular calculations
     DOUBLE dec_bounds[2];
     DOUBLE ra_bounds[2];
 
-    int64_t *original_index;//the input order for particles
-    uint8_t owns_memory;// boolean flag if the x/y/z pointers were separately malloc'ed -> need to be freed once calculations are done
+    int64_t *original_index;  // the input order for particles
+    uint8_t owns_memory;      // boolean flag if the x/y/z pointers were separately
+                          // malloc'ed -> need to be freed once calculations are done
 
     /*
       boolean flag (only relevant when external particle positions
@@ -26,5 +27,6 @@ typedef struct {
       pointers are being used for x/y/z
     */
 
-    uint8_t unused[7];//to maintain alignment explicitly (the compiler would insert this anyway)
+    uint8_t unused[7];  // to maintain alignment explicitly (the compiler would insert
+                        // this anyway)
 } cellarray_mocks;

@@ -14,7 +14,7 @@ typedef DOUBLE (*weight_func_t)(DOUBLE dx, DOUBLE dy, DOUBLE dz, DOUBLE w0, DOUB
 /*
  * The pair weight is the product of the particle weights
  */
-static inline DOUBLE pair_product(DOUBLE, DOUBLE, DOUBLE, DOUBLE w0, DOUBLE w1){
+static inline DOUBLE pair_product(DOUBLE, DOUBLE, DOUBLE, DOUBLE w0, DOUBLE w1) {
     return w0 * w1;
 }
 

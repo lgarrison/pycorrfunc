@@ -10,7 +10,7 @@ typedef struct {
     DOUBLE *Y;
     DOUBLE *Z;
     DOUBLE *W;
-    DOUBLE *xbounds[2];  //xmin and xmax for each cell
+    DOUBLE *xbounds[2];  // xmin and xmax for each cell
     DOUBLE *ybounds[2];
     DOUBLE *zbounds[2];
 
@@ -22,7 +22,8 @@ typedef struct {
     int have_weights;
 } cellarray;
 
-cellarray *allocate_cellarray(const int64_t np, const int nx, const int ny, const int nz, const int with_weights);
+cellarray *allocate_cellarray(
+   const int64_t np, const int nx, const int ny, const int nz, const int with_weights);
 
 int validate_cellarray(const cellarray *lattice);
 

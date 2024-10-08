@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-struct cell_pair{
+struct cell_pair {
     int64_t cellindex1;
     int64_t cellindex2;
 

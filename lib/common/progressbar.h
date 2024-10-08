@@ -1,8 +1,8 @@
 #pragma once
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 
 void init_my_progressbar(const int64_t N);
