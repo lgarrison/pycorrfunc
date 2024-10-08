@@ -15,8 +15,11 @@
 
 int sse_available(void) { return __builtin_cpu_supports("sse4.2"); }
 
-static inline SSE_FLOATS
-sse_pair_product(SSE_FLOATS, SSE_FLOATS, SSE_FLOATS, SSE_FLOATS w0, SSE_FLOATS w1) {
+static inline SSE_FLOATS sse_pair_product(SSE_FLOATS UNUSED(dx),
+                                          SSE_FLOATS UNUSED(dy),
+                                          SSE_FLOATS UNUSED(dz),
+                                          SSE_FLOATS w0,
+                                          SSE_FLOATS w1) {
     return SSE_MULTIPLY_FLOATS(w0, w1);
 }
 

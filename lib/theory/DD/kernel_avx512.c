@@ -17,8 +17,11 @@ int avx512_available(void) {
     ;
 }
 
-static inline AVX512_FLOATS avx512_pair_product(
-   AVX512_FLOATS, AVX512_FLOATS, AVX512_FLOATS, AVX512_FLOATS w0, AVX512_FLOATS w1) {
+static inline AVX512_FLOATS avx512_pair_product(AVX512_FLOATS UNUSED(dx),
+                                                AVX512_FLOATS UNUSED(dy),
+                                                AVX512_FLOATS UNUSED(dz),
+                                                AVX512_FLOATS w0,
+                                                AVX512_FLOATS w1) {
     return AVX512_MULTIPLY_FLOATS(w0, w1);
 }
 

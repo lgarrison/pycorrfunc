@@ -114,3 +114,5 @@
 #else
 #define PRAGMA_UNROLL(N) _Pragma(STRINGIFY(unroll N))
 #endif
+
+#define UNUSED(x) __attribute__((unused)) x

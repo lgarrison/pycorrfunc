@@ -17,8 +17,11 @@
 
 int avx_available(void) { return __builtin_cpu_supports("avx"); }
 
-static inline AVX_FLOATS
-avx_pair_product(AVX_FLOATS, AVX_FLOATS, AVX_FLOATS, AVX_FLOATS w0, AVX_FLOATS w1) {
+static inline AVX_FLOATS avx_pair_product(AVX_FLOATS UNUSED(dx),
+                                          AVX_FLOATS UNUSED(dy),
+                                          AVX_FLOATS UNUSED(dz),
+                                          AVX_FLOATS w0,
+                                          AVX_FLOATS w1) {
     return AVX_MULTIPLY_FLOATS(w0, w1);
 }
 
