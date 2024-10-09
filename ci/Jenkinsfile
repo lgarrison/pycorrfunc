@@ -1,29 +1,43 @@
 pipeline {
-    agent {
-        dockerfile {
-            filename 'ci/Dockerfile'
-            label 'docker'
-        }
-    }
+    agent none
     options {
         timeout(time: 10, unit: 'MINUTES')
     }
-    environment {
-        HOME = "$WORKSPACE"
-    }
     stages {
-        stage('Build') {
-            steps {
-                sh 'python3 -m pip install -U pip'
-                sh 'python3 -m pip install -v -Ccompile-args="-j$PARALLEL" .[test]'
-            }
-        }
-        stage('Test') {
-            environment {
-                OMP_NUM_THREADS = "${env.PARALLEL}"
-            }
-            steps {
-                sh 'python3 -m pytest -v'
+        stage('Build and Test') {
+            matrix {
+                axes {
+                    axis {
+                        name 'COMPILER'
+                        values 'gcc', 'clang'
+                    }
+                }
+                agent {
+                    dockerfile {
+                        filename 'ci/Dockerfile'
+                        label 'docker'
+                    }
+                }
+                environment {
+                    CC = "${env.COMPILER == 'gcc' ? 'gcc' : 'clang'}"
+                    CXX = "${env.COMPILER == 'gcc' ? 'g++' : 'clang++'}"
+                    HOME = "$WORKSPACE"
+                    OMP_NUM_THREADS = "$PARALLEL"
+                }
+                stages {
+                    stage('Build') {
+                        steps {
+                            sh 'python3 -m venv venv'
+                            sh '. venv/bin/activate && python -m pip install -U pip'
+                            sh '. venv/bin/activate && python -m pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" -Ccompile-args="--verbose" .[test]'
+                        }
+                    }
+                    stage('Test') {
+                        steps {
+                            sh '. venv/bin/activate && python -m pytest -vs'
+                        }
+                    }
+                }
             }
         }
     }
