@@ -37,16 +37,18 @@ def DD(
 
     if kwargs:
         raise TypeError(f'Unknown keyword arguments: {list(kwargs)}')
-    
+
     if max_cells is None:
         max_cells = 500
 
     dtype = np.dtype(dtype)
     if dtype.type == np.float64:
         from . import _pycorrfunc
+
         module = _pycorrfunc
     elif dtype.type == np.float32:
         from . import _pycorrfuncf
+
         module = _pycorrfuncf
     else:
         raise ValueError(f'Unsupported dtype: {dtype}')
@@ -134,7 +136,7 @@ def DD(
             'isa': isa,
             'num_threads': num_threads,
             'dtype': dtype,
-            'accum_dtype': accum_dtype
+            'accum_dtype': accum_dtype,
         },
         copy=False,
     )
