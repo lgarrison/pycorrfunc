@@ -1,5 +1,7 @@
 # pycorrfunc
 
+[![Tests](https://github.com/lgarrison/pycorrfunc/actions/workflows/tests.yaml/badge.svg)](https://github.com/lgarrison/pycorrfunc/actions/workflows/tests.yaml) [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/lgarrison/pycorrfunc/main.svg)](https://results.pre-commit.ci/latest/github/lgarrison/pycorrfunc/main) [![Jenkins Tests](https://jenkins.flatironinstitute.org/buildStatus/icon?job=pycorrfunc%2Fmain&subject=Jenkins%20Tests)](https://jenkins.flatironinstitute.org/job/pycorrfunc/job/main/)
+
 > [!WARNING]
 > This repo is a proof-of-concept and is not intended for public use.
 
