@@ -53,7 +53,9 @@ def brute_2pcf(pos, w, bin_edges, boxsize=None):
 )
 # @pytest.mark.parametrize("funcname", ["DD", "DDrppi", "DDsmu"])
 @pytest.mark.parametrize('funcname', ['DD'])
-def test_gridding(autocorr, gridref, maxcells, boxsize, funcname, isa='fastest', dtype='f4'):
+def test_gridding(
+    autocorr, gridref, maxcells, boxsize, funcname, isa='fastest', dtype='f4'
+):
     check_brute(autocorr, gridref, maxcells, boxsize, funcname, isa, dtype)
 
 
@@ -74,7 +76,7 @@ def test_accum_prec(N=100_000):
     see some loss of precision if the wavg accumulator is single-precision.
     """
     dtype = 'f4'
-    boxsize = 1.
+    boxsize = 1.0
 
     rng = np.random.default_rng(1237)
     boxsize_arr = np.atleast_2d(boxsize).T
@@ -95,13 +97,13 @@ def test_accum_prec(N=100_000):
         bins=bin_edges,
         boxsize=boxsize,
         dtype=dtype,
-        verbose=True,
+        verbose=False,
         do_ravg=True,
     )
 
     results = theory.DD(**kwargs)
 
-    npt.assert_equal(results['wavg'], 1.)
+    npt.assert_equal(results['wavg'], 1.0)
 
 
 def check_brute(
@@ -152,7 +154,7 @@ def check_brute(
         boxsize=boxsize,
         max_cells=maxcells,
         dtype=dtype,
-        verbose=True,
+        verbose=False,
         grid_refine=gridref,
         do_ravg=True,
     )
