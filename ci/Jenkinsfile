@@ -46,7 +46,8 @@ pipeline {
                 }
             }
         }
-        Stage('Build and Upload Wheels') {
+
+        stage('Build and Upload Wheels') {
             options {
                 timeout(time: 15, unit: 'MINUTES')
             }
