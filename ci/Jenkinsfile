@@ -15,7 +15,7 @@ pipeline {
                 agent {
                     dockerfile {
                         filename 'ci/Dockerfile'
-                        label 'docker'
+                        label 'linux && docker'
                     }
                 }
                 environment {
@@ -52,7 +52,8 @@ pipeline {
                 timeout(time: 15, unit: 'MINUTES')
             }
             agent {
-                label 'linux'
+                filename 'ci/Dockerfile'
+                label 'linux && docker'
             }
             environment {
                 // TODO: these probably need to be re-exported into CIBW
