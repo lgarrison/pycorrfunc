@@ -51,7 +51,9 @@ pipeline {
             options {
                 timeout(time: 15, unit: 'MINUTES')
             }
-            agent any
+            agent {
+                label 'linux'
+            }
             environment {
                 // TODO: these probably need to be re-exported into CIBW
                 CC = 'gcc'
