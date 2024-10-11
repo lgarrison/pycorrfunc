@@ -52,9 +52,16 @@ pipeline {
                 timeout(time: 15, unit: 'MINUTES')
             }
             agent {
-                dockerfile {
-                    filename 'ci/Dockerfile'
+                // dockerfile {
+                //     // filename 'ci/Dockerfile'
+                //     image 'docker'
+                //     label 'linux && docker'
+                //     args '-v /var/run/docker.sock:/var/run/docker.sock'
+                // }
+                docker {
+                    image 'docker'
                     label 'linux && docker'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
             environment {
