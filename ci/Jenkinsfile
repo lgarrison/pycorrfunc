@@ -1,10 +1,10 @@
 pipeline {
     agent none
-    options {
-        timeout(time: 10, unit: 'MINUTES')
-    }
     stages {
         stage('Build and Test') {
+            options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
             matrix {
                 axes {
                     axis {
@@ -27,17 +27,51 @@ pipeline {
                 stages {
                     stage('Build') {
                         steps {
-                            sh 'python3 -m venv venv'
-                            sh '. venv/bin/activate && python -m pip install -U pip'
-                            sh '. venv/bin/activate && python -m pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" -Ccompile-args="--verbose" .[test]'
+                            sh '''
+                                python3 -m venv venv
+                                . venv/bin/activate
+                                python -m pip install -U pip
+                                python -m pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" -Ccompile-args="--verbose" .[test]
+                            '''
                         }
                     }
                     stage('Test') {
                         steps {
-                            sh '. venv/bin/activate && python -m pytest -vs'
+                            sh '''
+                                . venv/bin/activate
+                                python -m pytest -vs
+                            '''
                         }
                     }
                 }
+            }
+        }
+        Stage('Build and Upload Wheels') {
+            options {
+                timeout(time: 15, unit: 'MINUTES')
+            }
+            agent any
+            environment {
+                // TODO: these probably need to be re-exported into CIBW
+                CC = 'gcc'
+                CXX = 'g++'
+                HOME = "$WORKSPACE"
+                OMP_NUM_THREADS = "$PARALLEL"
+            }
+            stages {
+                stage('Build') {
+                    steps {
+                        sh '''
+                            python3 -m venv venv
+                            . venv/bin/activate
+                            python -m pip install -U pip
+                            python -m pip install -vU cibuildwheel
+                            cibuildwheel
+                        '''
+                    }
+                }
+                // stage('Upload') {
+                // }
             }
         }
     }

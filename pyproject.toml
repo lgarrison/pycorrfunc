@@ -4,7 +4,7 @@ requires = ['meson-python']
 
 [project]
 name = 'pycorrfunc'
-version = '0.0.1'
+version = '0.1.0'
 description = 'A pythonic rewrite of the software infrastructure surrounding Corrfunc'
 authors = [
   {name = 'Lehman Garrison', email = 'lgarrison@flatironinstitute.org'},
@@ -15,6 +15,7 @@ dependencies = [
   'astropy',
 ]
 license = { file = "LICENSE" }
+requires-python = ">= 3.9"
 
 [project.optional-dependencies]
 test = ["pytest"]
@@ -28,3 +29,19 @@ quote-style = "single"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.cibuildwheel]
+archs = "auto64"
+test-command = "pytest -s {project}/tests"
+test-extras = "test"
+skip = "pp* *-musllinux_*"
+build-verbosity = 1
+manylinux-x86_64-image = "manylinux_2_28"
+
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = [
+  "auditwheel repair -w {dest_dir} {wheel}",
+  # run abi3audit on wheels tagged with abi3
+  'case "$(basename {wheel})" in *"-abi3-"*) pip install -U abi3audit && abi3audit --strict --report {wheel};; esac',
+]
