@@ -7,4 +7,5 @@ RUN dnf -y install \
     git \
     gcc \
     gcc-c++ \
-    clang
+    clang \
+    podman
