@@ -4,7 +4,7 @@ requires = ['meson-python']
 
 [project]
 name = 'pycorrfunc'
-version = '0.1.0'
+version = '0.1.1'  # TODO: dynamic
 description = 'A pythonic rewrite of the software infrastructure surrounding Corrfunc'
 authors = [
   {name = 'Lehman Garrison', email = 'lgarrison@flatironinstitute.org'},
