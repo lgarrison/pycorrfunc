@@ -37,7 +37,6 @@ test-extras = "test"
 skip = "pp* *-musllinux_*"
 build-verbosity = 1
 manylinux-x86_64-image = "manylinux_2_28"
-container-engine = "podman"
 
 
 [tool.cibuildwheel.linux]
