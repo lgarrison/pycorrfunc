@@ -54,6 +54,9 @@ pipeline {
             agent { label 'linux' }
             environment {
                 HOME = "$WORKSPACE"
+                OMP_NUM_THREADS = "$PARALLEL"
+                CIBW_ENVIRONMENT_PASS_LINUX = OMP_NUM_THREADS
+                UV_PYTHON_PREFERENCE = managed
             }
             stages {
                 stage('Build') {
@@ -65,8 +68,17 @@ pipeline {
                         '''
                     }
                 }
-                // stage('Upload') {
-                // }
+                stage('Upload') {
+                    environment {
+                        UV_PUBLISH_TOKEN = credentials('pycorrfunc-testpypi')
+                    }
+                    steps {
+                        sh '''
+                            . $HOME/.cargo/env
+                            uv publish --publish-url="https://test.pypi.org/legacy/" wheelhouse/*.whl
+                        '''
+                    }
+                }
             }
         }
     }
