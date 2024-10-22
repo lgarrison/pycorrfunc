@@ -49,7 +49,7 @@ pipeline {
 
         stage('Build and Upload Wheels') {
             when {
-                tag pattern: "v\\d+.*", comparator: "REGEXP"
+                tag pattern: "v*"
             }
             options {
                 timeout(time: 15, unit: 'MINUTES')
