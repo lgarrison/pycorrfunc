@@ -4,8 +4,7 @@ requires = ['meson-python']
 
 [project]
 name = 'pycorrfunc'
-version = '0.1.1'  # TODO: dynamic
-description = 'A pythonic rewrite of the software infrastructure surrounding Corrfunc'
+description = 'A pythonic rewrite of the Corrfunc software infrastructure'
 authors = [
   {name = 'Lehman Garrison', email = 'lgarrison@flatironinstitute.org'},
   {name = 'Peter McMaster', email = 'pjm2188@columbia.edu'},
@@ -16,6 +15,8 @@ dependencies = [
 ]
 license = { file = "LICENSE" }
 requires-python = ">= 3.9"
+dynamic = ["version"]
+readme = "README.md"
 
 [project.optional-dependencies]
 test = ["pytest"]
@@ -37,7 +38,6 @@ test-extras = "test"
 skip = "pp* *-musllinux_*"
 build-verbosity = 1
 manylinux-x86_64-image = "manylinux_2_28"
-
 
 [tool.cibuildwheel.linux]
 repair-wheel-command = [

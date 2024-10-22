@@ -1,9 +1,8 @@
 project(
     'pycorrfunc',
-    'cpp',
-    'c',
-    version: '0.1.0',
-    license: 'BSD',
+    ['cpp', 'c'],
+    version: '0.1.2dev',
+    license: 'MIT',
     meson_version: '>= 1.1.0',
     default_options: [
         'cpp_std=c++17',
@@ -27,7 +26,7 @@ simd = import('unstable-simd')
 
 cc = meson.get_compiler('c')
 
-inc = include_directories('include', 'lib/theory/DD', 'lib/common', 'tests')
+inc = include_directories('include', 'lib/theory/DD', 'lib/common')
 
 extra_args = ['-funroll-loops']
 
