@@ -60,11 +60,15 @@ pipeline {
                 OMP_NUM_THREADS = "$PARALLEL"
                 CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
                 UV_PYTHON_PREFERENCE = "managed"
+                MY_BRANCH_NAME = "${env.BRANCH_NAME}"
+                MY_TAG_NAME = "${env.TAG_NAME}"
             }
             stages {
                 stage('Build') {
                     steps {
                         sh '''
+                            echo "MY_BRANCH_NAME: $MY_BRANCH_NAME"
+                            echo "MY_TAG_NAME: $MY_TAG_NAME"
                             curl -LsSf https://astral.sh/uv/install.sh | sh
                             . $HOME/.cargo/env
                             uvx cibuildwheel
