@@ -3,7 +3,7 @@ project(
     ['cpp', 'c'],
     version: '0.1.2dev',
     license: 'MIT',
-    meson_version: '>= 1.1.0',
+    meson_version: '>= 1.3.0',
     default_options: [
         'cpp_std=c++17',
         # 'b_sanitize=address,undefined',

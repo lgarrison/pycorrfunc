@@ -48,10 +48,10 @@ pipeline {
         }
 
         stage('Build and Upload Wheels') {
-            when {
-                buildingTag()
-                tag pattern: "v\\d+.*", comparator: "REGEXP"
-            }
+            // when {
+            //     buildingTag()
+            //     tag pattern: "v\\d+.*", comparator: "REGEXP"
+            // }
             options {
                 timeout(time: 15, unit: 'MINUTES')
             }
@@ -61,21 +61,41 @@ pipeline {
                 OMP_NUM_THREADS = "$PARALLEL"
                 CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
                 UV_PYTHON_PREFERENCE = "managed"
-                MY_BRANCH_NAME = "${env.BRANCH_NAME}"
-                MY_TAG_NAME = "${env.TAG_NAME}"
             }
+
             stages {
-                stage('Build') {
+                stage('Install UV') {
                     steps {
-                        sh '''
-                            echo "MY_BRANCH_NAME: $MY_BRANCH_NAME"
-                            echo "MY_TAG_NAME: $MY_TAG_NAME"
-                            curl -LsSf https://astral.sh/uv/install.sh | sh
-                            . $HOME/.cargo/env
-                            uvx cibuildwheel
-                        '''
+                        sh 'curl -LsSf https://astral.sh/uv/install.sh | sh'
                     }
                 }
+
+                stage('Build') {
+                    matrix {
+                        axes {
+                            axis {
+                                name 'PYTHON'
+                                values '3.9', '3.10', '3.11', '3.12', '3.13'
+                            }
+                        }
+                        environment {
+                            UV_PYTHON_VERSION = "${env.PYTHON}"
+                        }
+
+                        stages {
+                            stage('Build') {
+                                steps {
+                                    sh '''
+                                        . $HOME/.cargo/env
+                                        # TODO: parallel over Python versions, and use limited ABI for 3.12+?
+                                        uvx cibuildwheel
+                                    '''
+                                }
+                            }
+                        }
+                    }
+                }
+
                 stage('Upload') {
                     environment {
                         UV_PUBLISH_TOKEN = credentials('pycorrfunc-testpypi')
