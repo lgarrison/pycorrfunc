@@ -14,7 +14,6 @@
 
 int avx512_available(void) {
     return __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl");
-    ;
 }
 
 static inline AVX512_FLOATS avx512_pair_product(AVX512_FLOATS UNUSED(dx),

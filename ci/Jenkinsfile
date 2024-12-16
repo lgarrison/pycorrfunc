@@ -1,10 +1,10 @@
 pipeline {
     agent none
-    options {
-        timeout(time: 10, unit: 'MINUTES')
-    }
     stages {
         stage('Build and Test') {
+            options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
             matrix {
                 axes {
                     axis {
@@ -15,7 +15,7 @@ pipeline {
                 agent {
                     dockerfile {
                         filename 'ci/Dockerfile'
-                        label 'docker'
+                        label 'linux && docker'
                     }
                 }
                 environment {
@@ -27,15 +27,84 @@ pipeline {
                 stages {
                     stage('Build') {
                         steps {
-                            sh 'python3 -m venv venv'
-                            sh '. venv/bin/activate && python -m pip install -U pip'
-                            sh '. venv/bin/activate && python -m pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" -Ccompile-args="--verbose" .[test]'
+                            sh '''
+                                python3 -m venv venv
+                                . venv/bin/activate
+                                python -m pip install -U pip
+                                python -m pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" -Ccompile-args="--verbose" .[test]
+                            '''
                         }
                     }
                     stage('Test') {
                         steps {
-                            sh '. venv/bin/activate && python -m pytest -vs'
+                            sh '''
+                                . venv/bin/activate
+                                python -m pytest -vs
+                            '''
                         }
+                    }
+                }
+            }
+        }
+
+        stage('Build and Upload Wheels') {
+            // when {
+            //     buildingTag()
+            //     tag pattern: "v\\d+.*", comparator: "REGEXP"
+            // }
+            options {
+                timeout(time: 15, unit: 'MINUTES')
+            }
+            agent { label 'linux' }
+            environment {
+                HOME = "$WORKSPACE"
+                OMP_NUM_THREADS = "$PARALLEL"
+                CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
+                UV_PYTHON_PREFERENCE = "managed"
+            }
+
+            stages {
+                stage('Install UV') {
+                    steps {
+                        sh 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+                    }
+                }
+
+                stage('Build') {
+                    matrix {
+                        axes {
+                            axis {
+                                name 'PYTHON'
+                                values '3.9', '3.10', '3.11', '3.12', '3.13'
+                            }
+                        }
+                        environment {
+                            UV_PYTHON_VERSION = "${env.PYTHON}"
+                        }
+
+                        stages {
+                            stage('Build') {
+                                steps {
+                                    sh '''
+                                        . $HOME/.cargo/env
+                                        # TODO: parallel over Python versions, and use limited ABI for 3.12+?
+                                        uvx cibuildwheel
+                                    '''
+                                }
+                            }
+                        }
+                    }
+                }
+
+                stage('Upload') {
+                    environment {
+                        UV_PUBLISH_TOKEN = credentials('pycorrfunc-testpypi')
+                    }
+                    steps {
+                        sh '''
+                            . $HOME/.cargo/env
+                            uv publish --publish-url="https://test.pypi.org/legacy/" wheelhouse/*.whl
+                        '''
                     }
                 }
             }
