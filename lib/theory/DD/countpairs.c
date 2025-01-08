@@ -52,12 +52,16 @@ kernel_func_ptr countpairs_driver(const config_options *options) {
                 function = countpairs_avx512;
                 if (options->verbose) fprintf(stderr, "Using AVX512 kernel\n");
                 break;
-            }
-#endif
-            if (err_if_not_avail) {
-                sprintf(ERRMSG, "AVX512 not available\n");
+            } else if (err_if_not_avail) {
+                sprintf(ERRMSG, "AVX512 not available at runtime\n");
                 return NULL;
             }
+#else
+            if (err_if_not_avail) {
+                sprintf(ERRMSG, "AVX512 not available at compile time\n");
+                return NULL;
+            }
+#endif
             // fallthrough
         case AVX:
 #ifdef HAVE_AVX
@@ -65,12 +69,16 @@ kernel_func_ptr countpairs_driver(const config_options *options) {
                 function = countpairs_avx;
                 if (options->verbose) fprintf(stderr, "Using AVX kernel\n");
                 break;
-            }
-#endif
-            if (err_if_not_avail) {
-                sprintf(ERRMSG, "AVX not available\n");
+            } else if (err_if_not_avail) {
+                sprintf(ERRMSG, "AVX not available at runtime\n");
                 return NULL;
             }
+#else
+            if (err_if_not_avail) {
+                sprintf(ERRMSG, "AVX not available at compile time\n");
+                return NULL;
+            }
+#endif
             // fallthrough
         case SSE42:
 #ifdef HAVE_SSE42
@@ -78,12 +86,16 @@ kernel_func_ptr countpairs_driver(const config_options *options) {
                 function = countpairs_sse;
                 if (options->verbose) fprintf(stderr, "Using SSE42 kernel\n");
                 break;
-            }
-#endif
-            if (err_if_not_avail) {
-                sprintf(ERRMSG, "SSE42 not available\n");
+            } else if (err_if_not_avail) {
+                sprintf(ERRMSG, "SSE42 not available at runtime\n");
                 return NULL;
             }
+#else
+            if (err_if_not_avail) {
+                sprintf(ERRMSG, "SSE42 not available at compile time\n");
+                return NULL;
+            }
+#endif
             // fallthrough
         case FALLBACK:
             function = countpairs_fallback;
