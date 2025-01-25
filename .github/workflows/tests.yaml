@@ -62,7 +62,7 @@ jobs:
 
     - name: Install from source
       run: |
-        uv sync -v --extra test --no-editable \
+        uv sync -v --no-editable \
           -Csetup-args="-Dwerror=true"
 
     - name: Run tests (no AVX512)
