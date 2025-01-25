@@ -62,7 +62,6 @@ pipeline {
                 stage('Install cibuildwheel') {
                     steps {
                         sh '''
-                            printenv PATH
                             id=$(docker create ghcr.io/astral-sh/uv:latest)
                             mkdir -p $HOME/.local/bin
                             docker cp $id:/uv $HOME/.local/bin/
