@@ -21,6 +21,11 @@ readme = "README.md"
 [project.optional-dependencies]
 test = ["pytest"]
 
+[tool.meson-python]
+# This determines the wheel tag.
+# It is automatically reverted to false if the build uses `python.allow_limited_api=false`.
+limited-api = true
+
 [tool.meson-python.args]
 compile = ["-v"]
 # setup = ["-Dbuildtype=debug"]
@@ -45,3 +50,7 @@ repair-wheel-command = [
   # run abi3audit on wheels tagged with abi3
   'case "$(basename {wheel})" in *"-abi3-"*) pip install -U abi3audit && abi3audit --strict --report {wheel};; esac',
 ]
+
+[[tool.cibuildwheel.overrides]]
+select = "cp{312,313}-*"
+config-settings = "setup-args=-Dpython.allow_limited_api=true"
