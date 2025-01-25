@@ -23,24 +23,17 @@ pipeline {
                     CXX = "${env.COMPILER == 'gcc' ? 'g++' : 'clang++'}"
                     HOME = "$WORKSPACE"
                     OMP_NUM_THREADS = "$PARALLEL"
+                    UV_PYTHON_PREFERENCE = "system"
                 }
                 stages {
                     stage('Build') {
                         steps {
-                            sh '''
-                                python3 -m venv venv
-                                . venv/bin/activate
-                                python -m pip install -U pip
-                                python -m pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" -Ccompile-args="--verbose" .[test]
-                            '''
+                            sh 'uv sync -v --extra test -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL"'
                         }
                     }
                     stage('Test') {
                         steps {
-                            sh '''
-                                . venv/bin/activate
-                                python -m pytest -vs
-                            '''
+                            sh 'uv run -v --no-sync pytest -vs'
                         }
                     }
                 }
@@ -60,13 +53,19 @@ pipeline {
                 HOME = "$WORKSPACE"
                 OMP_NUM_THREADS = "$PARALLEL"
                 CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
-                UV_PYTHON_PREFERENCE = "managed"
+                CIBW_BUILD_FRONTEND = "build[uv]"
+                UV_PYTHON_PREFERENCE = "system"
             }
 
             stages {
-                stage('Install UV') {
+                stage('Install cibuildwheel') {
                     steps {
-                        sh 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+                        sh '''
+                            id=$(docker create ghcr.io/astral-sh/uv:latest)
+                            docker cp $id:/uv $HOME/.local/bin/
+                            docker rm $id
+                            uv tool install cibuildwheel
+                        '''
                     }
                 }
 
@@ -75,21 +74,17 @@ pipeline {
                         axes {
                             axis {
                                 name 'PYTHON'
-                                values '3.9', '3.10', '3.11', '3.12', '3.13'
+                                values 'cp39', 'cp310', 'cp311', 'cp312'
                             }
                         }
                         environment {
-                            UV_PYTHON_VERSION = "${env.PYTHON}"
+                            CIBW_BUILD = "${env.PYTHON}-*"
                         }
 
                         stages {
                             stage('Build') {
                                 steps {
-                                    sh '''
-                                        . $HOME/.cargo/env
-                                        # TODO: parallel over Python versions, and use limited ABI for 3.12+?
-                                        uvx cibuildwheel
-                                    '''
+                                    sh 'cibuildwheel'
                                 }
                             }
                         }
@@ -101,10 +96,7 @@ pipeline {
                         UV_PUBLISH_TOKEN = credentials('pycorrfunc-testpypi')
                     }
                     steps {
-                        sh '''
-                            . $HOME/.cargo/env
-                            uv publish --publish-url="https://test.pypi.org/legacy/" wheelhouse/*.whl
-                        '''
+                        sh 'uv publish --publish-url="https://test.pypi.org/legacy/" wheelhouse/*.whl'
                     }
                 }
             }
