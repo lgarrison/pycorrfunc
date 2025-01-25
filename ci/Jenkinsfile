@@ -23,7 +23,7 @@ pipeline {
                     CXX = "${env.COMPILER == 'gcc' ? 'g++' : 'clang++'}"
                     HOME = "$WORKSPACE"
                     OMP_NUM_THREADS = "$PARALLEL"
-                    UV_PYTHON_PREFERENCE = "system"
+                    UV_PYTHON_PREFERENCE = "only-system"
                 }
                 stages {
                     stage('Build') {
@@ -62,6 +62,7 @@ pipeline {
                     steps {
                         sh '''
                             id=$(docker create ghcr.io/astral-sh/uv:latest)
+                            mkdir -p $HOME/.local/bin
                             docker cp $id:/uv $HOME/.local/bin/
                             docker rm $id
                             uv tool install cibuildwheel
