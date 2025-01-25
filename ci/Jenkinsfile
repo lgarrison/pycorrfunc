@@ -28,7 +28,7 @@ pipeline {
                 stages {
                     stage('Build') {
                         steps {
-                            sh 'uv sync -v --extra test -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL"'
+                            sh 'uv sync -v --no-editable --extra test -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL"'
                         }
                     }
                     stage('Test') {
