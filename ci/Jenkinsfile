@@ -61,7 +61,6 @@ pipeline {
                 HOME = "$WORKSPACE"
                 OMP_NUM_THREADS = "$PARALLEL"
                 CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
-                CIBW_BUILD_FRONTEND = "build[uv]"
                 UV_PYTHON_PREFERENCE = "system"
                 PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
             }
