@@ -1,7 +1,10 @@
 project(
     'pycorrfunc',
     ['cpp', 'c'],
-    version: '0.1.2dev1',
+    version: run_command('python',
+        '-m', 'setuptools_scm',
+        check: true,
+    ).stdout().strip(),
     license: 'MIT',
     meson_version: '>= 1.3.0',
     default_options: [

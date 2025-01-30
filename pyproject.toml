@@ -1,6 +1,6 @@
 [build-system]
 build-backend = 'mesonpy'
-requires = ['meson-python']
+requires = ['meson-python', 'setuptools_scm >= 8']
 
 [project]
 name = 'pycorrfunc'
@@ -18,8 +18,10 @@ requires-python = ">= 3.9"
 dynamic = ["version"]
 readme = "README.md"
 
-[project.optional-dependencies]
-test = ["pytest"]
+[tool.setuptools_scm]
+
+[dependency-groups]
+dev = ["pre-commit", "pytest"]
 
 [tool.meson-python]
 # This determines the wheel tag.
