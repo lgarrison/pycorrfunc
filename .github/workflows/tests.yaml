@@ -62,11 +62,14 @@ jobs:
           echo "CXX=clang++" >> $GITHUB_ENV
         fi
 
+    # Not using uv sync due to https://github.com/astral-sh/uv/issues/10996
     - name: Install from source
       run: |
-        uv sync -v --extra test --no-editable \
-          -Csetup-args="-Dwerror=true"
+        uv venv
+        . .venv/bin/activate
+        uv pip install -v -Csetup-args="-Dwerror=true" .[test]
 
     - name: Run tests (no AVX512)
       run: |
-        uv run --no-sync pytest -v -k 'not avx512'
+        . .venv/bin/activate
+        pytest -v -k 'not avx512'

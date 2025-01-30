@@ -28,12 +28,20 @@ pipeline {
                 stages {
                     stage('Build') {
                         steps {
-                            sh 'uv sync -v --no-editable --extra test -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL"'
+                            // Not using uv sync due to https://github.com/astral-sh/uv/issues/10996
+                            sh '''
+                                uv venv
+                                . .venv/bin/activate
+                                uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" .[test]
+                            '''
                         }
                     }
                     stage('Test') {
                         steps {
-                            sh 'uv run -v --no-sync pytest -vs'
+                            sh '''
+                                . .venv/bin/activate
+                                pytest -vs
+                            '''
                         }
                     }
                 }
@@ -41,10 +49,10 @@ pipeline {
         }
 
         stage('Build and Upload Wheels') {
-            // when {
-            //     buildingTag()
-            //     tag pattern: "v\\d+.*", comparator: "REGEXP"
-            // }
+            when {
+                buildingTag()
+                tag pattern: "v\\d+.*", comparator: "REGEXP"
+            }
             options {
                 timeout(time: 15, unit: 'MINUTES')
             }
@@ -61,6 +69,7 @@ pipeline {
             stages {
                 stage('Install cibuildwheel') {
                     steps {
+                        // We're using docker as a way to install uv from a cache
                         sh '''
                             id=$(docker create ghcr.io/astral-sh/uv:latest)
                             mkdir -p $HOME/.local/bin
@@ -76,6 +85,7 @@ pipeline {
                         axes {
                             axis {
                                 name 'PYTHON'
+                                // cp312 will build Limited API wheels for 3.12+
                                 values 'cp39', 'cp310', 'cp311', 'cp312'
                             }
                         }
