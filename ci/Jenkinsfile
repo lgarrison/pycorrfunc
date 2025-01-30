@@ -29,10 +29,12 @@ pipeline {
                     stage('Build') {
                         steps {
                             // Not using uv sync due to https://github.com/astral-sh/uv/issues/10996
+                            // Waiting for uv pip install --group: https://github.com/astral-sh/uv/issues/8590
                             sh '''
                                 uv venv
                                 . .venv/bin/activate
-                                uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" .[test]
+                                uv export --only-group=dev | uv pip install --requirements=-
+                                uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" .
                             '''
                         }
                     }
@@ -74,7 +76,7 @@ pipeline {
                             mkdir -p $HOME/.local/bin
                             docker cp $id:/uv $HOME/.local/bin/
                             docker rm $id
-                            uv tool install cibuildwheel
+                            uv tool install 'cibuildwheel >= 2.22'
                         '''
                     }
                 }

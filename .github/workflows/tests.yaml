@@ -63,11 +63,13 @@ jobs:
         fi
 
     # Not using uv sync due to https://github.com/astral-sh/uv/issues/10996
+    # Waiting for uv pip install --group: https://github.com/astral-sh/uv/issues/8590
     - name: Install from source
       run: |
         uv venv
         . .venv/bin/activate
-        uv pip install -v -Csetup-args="-Dwerror=true" .[test]
+        uv export --only-group=dev | uv pip install --requirements=-
+        uv pip install -v -Csetup-args="-Dwerror=true" .
 
     - name: Run tests (no AVX512)
       run: |

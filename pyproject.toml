@@ -45,7 +45,7 @@ build-verbosity = 1
 manylinux-x86_64-image = "manylinux_2_28"
 skip = "pp* *-musllinux_*"
 test-command = "pytest -s {project}/tests"
-test-extras = "test"
+test-groups = "test"
 
 [tool.cibuildwheel.linux]
 repair-wheel-command = [
