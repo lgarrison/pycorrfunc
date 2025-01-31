@@ -66,60 +66,82 @@ pipeline {
 
             stages {
                 stage('Build') {
-                    parallel {
-                        stage('Build wheels') {
-                            agent { label 'linux' }
-                            stages {
-                                stage('Install cibuildwheel') {
-                                    steps {
-                                        // We're using docker as a way to install uv from a cache
-                                        sh '''
-                                            id=$(docker create ghcr.io/astral-sh/uv:latest)
-                                            mkdir -p $HOME/.local/bin
-                                            docker cp $id:/uv $HOME/.local/bin/
-                                            docker rm $id
-                                            uv tool install 'cibuildwheel >= 2.22'
-                                        '''
+                    agent { label 'linux' }
+                    stages {
+                        stage('Install cibuildwheel') {
+                            steps {
+                                // We're using docker as a way to install uv from a cache
+                                sh '''
+                                    id=$(docker create ghcr.io/astral-sh/uv:latest)
+                                    mkdir -p $HOME/.local/bin
+                                    docker cp $id:/uv $HOME/.local/bin/
+                                    docker rm $id
+                                    uv tool install 'cibuildwheel >= 2.22'
+                                '''
+                            }
+                        }
+
+                        stage('Build') {
+                            matrix {
+                                axes {
+                                    axis {
+                                        name 'PYTHON'
+                                        // cp312 will build Limited API wheels for 3.12+
+                                        values 'cp39', 'cp310', 'cp311', 'cp312', 'sdist'
                                     }
                                 }
 
-                                stage('Build wheel') {
-                                    environment {
-                                        CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
-                                        // PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
-                                    }
-                                    matrix {
-                                        axes {
-                                            axis {
-                                                name 'PYTHON'
-                                                // cp312 will build Limited API wheels for 3.12+
-                                                values 'cp39', 'cp310', 'cp311', 'cp312'
-                                            }
+                                stages {
+                                    stage('Wheel') {
+                                        when {
+                                            expression { env.PYTHON != 'sdist' }
                                         }
                                         environment {
                                             CIBW_BUILD = "${env.PYTHON}-*"
+                                            CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
+                                            // PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
                                         }
-
+                                        steps {
+                                            sh 'cibuildwheel'
+                                        }
+                                    }
+                                    stage('sdist') {
+                                        when {
+                                            expression { env.PYTHON == 'sdist' }
+                                        }
                                         stages {
                                             stage('Build') {
+                                                agent {
+                                                    dockerfile {
+                                                        filename 'ci/Dockerfile'
+                                                        label 'linux && docker'
+                                                    }
+                                                }
                                                 steps {
-                                                    sh 'cibuildwheel'
+                                                    sh 'uv build -v --sdist'
+                                                }
+                                            }
+
+                                            stage('Test') {
+                                                agent {
+                                                    dockerfile {
+                                                        filename 'ci/Dockerfile'
+                                                        label 'linux && docker'
+                                                    }
+                                                }
+                                                steps {
+                                                    sh '''
+                                                        uv venv
+                                                        . .venv/bin/activate
+                                                        uv export --only-group=dev | uv pip install --requirements=-
+                                                        uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" dist/*.tar.gz
+                                                        pytest -vs
+                                                    '''
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
-                        }
-                        stage('Build sdist') {
-                            agent {
-                                dockerfile {
-                                    filename 'ci/Dockerfile'
-                                    label 'linux && docker'
-                                }
-                            }
-                            steps {
-                                sh 'uv build -v --sdist'
                             }
                         }
                     }
