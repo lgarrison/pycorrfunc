@@ -52,6 +52,7 @@ pipeline {
 
         stage('Build and Upload') {
             // when {
+            //     beforeAgent true
             //     buildingTag()
             //     tag pattern: "v\\d+.*", comparator: "REGEXP"
             // }
@@ -71,6 +72,7 @@ pipeline {
                     steps {
                         // We're using docker as a way to install uv from a cache
                         sh '''
+                            printenv HOSTNAME HOME WORKSPACE
                             id=$(docker create ghcr.io/astral-sh/uv:latest)
                             mkdir -p $HOME/.local/bin
                             docker cp $id:/uv $HOME/.local/bin/
@@ -92,7 +94,7 @@ pipeline {
                         }
 
                         stages {
-                            stage('Wheel') {
+                            stage('wheel') {
                                 when {
                                     beforeAgent true
                                     not { environment name: 'PYTHON', value: 'sdist' }
@@ -103,7 +105,7 @@ pipeline {
                                     ENV_PYTHON = "${env.PYTHON}"
                                 }
                                 steps {
-                                    sh 'printenv ENV_PYTHON && cibuildwheel'
+                                    sh 'printenv HOSTNAME HOME WORKSPACE && cibuildwheel'
                                 }
                             }
                             stage('sdist') {
@@ -117,13 +119,10 @@ pipeline {
                                         label 'linux && docker'
                                     }
                                 }
-                                environment {
-                                    HOME = "${env.WORKSPACE}"
-                                }
                                 steps {
                                     // Build
                                     sh '''
-                                        printenv
+                                        printenv HOSTNAME HOME WORKSPACE
                                         ls -l $HOME/.cache || true
                                         ls -l $WORKSPACE/.cache || true
                                         uv build -v --sdist
