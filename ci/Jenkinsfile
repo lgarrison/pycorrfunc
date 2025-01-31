@@ -76,6 +76,8 @@ pipeline {
                             docker cp $id:/uv $HOME/.local/bin/
                             docker rm $id
                             uv tool install 'cibuildwheel >= 2.22'
+                            # work around race condition in cibuildwheel
+                            mkdir -p $WORKSPACE/wheelhouse
                         '''
                     }
                 }
