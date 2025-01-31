@@ -55,7 +55,7 @@ pipeline {
             //     buildingTag()
             //     tag pattern: "v\\d+.*", comparator: "REGEXP"
             // }
-            agent { label 'linux' }
+            agent { label 'linux && docker' }
             options {
                 timeout(time: 15, unit: 'MINUTES')
             }
@@ -99,9 +99,10 @@ pipeline {
                                 environment {
                                     CIBW_BUILD = "${env.PYTHON}-*"
                                     CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
+                                    ENV_PYTHON = "${env.PYTHON}"
                                 }
                                 steps {
-                                    sh 'cibuildwheel'
+                                    sh 'printenv ENV_PYTHON && cibuildwheel'
                                 }
                             }
                             stage('sdist') {
