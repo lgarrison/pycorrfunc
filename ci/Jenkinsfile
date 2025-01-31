@@ -129,6 +129,9 @@ pipeline {
                                         label 'linux && docker'
                                     }
                                 }
+                                environment {
+                                    HOME = "${env.WORKSPACE}"
+                                }
                                 steps {
                                     // Build
                                     sh '''
