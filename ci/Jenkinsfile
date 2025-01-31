@@ -61,14 +61,16 @@ pipeline {
                 timeout(time: 15, unit: 'MINUTES')
             }
             environment {
-                HOME = "${env.WORKSPACE}"
                 OMP_NUM_THREADS = "${env.PARALLEL}"
                 UV_PYTHON_PREFERENCE = "system"
-                PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
             }
 
             stages {
                 stage('Setup') {
+                    environment {
+                        HOME = "${env.WORKSPACE}"
+                        PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
+                    }
                     steps {
                         // We're using docker as a way to install uv from a cache
                         sh '''
@@ -101,15 +103,15 @@ pipeline {
                                     not { environment name: 'PYTHON', value: 'sdist' }
                                 }
                                 environment {
+                                    HOME = "${env.WORKSPACE}"
+                                    PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
                                     CIBW_BUILD = "${env.PYTHON}-*"
                                     CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
-                                    ENV_PYTHON = "${env.PYTHON}"
                                 }
                                 steps {
                                     sh '''
                                         ls -l /home/agent/workspace || true
                                         ls -l /home/jenkins/workspace || true
-                                        ls -lR /home || true
                                         hostname
                                         printenv
                                         cibuildwheel
@@ -130,7 +132,7 @@ pipeline {
                                 steps {
                                     // Build
                                     sh '''
-                                        hostname; printenv HOME WORKSPACE
+                                        hostname; printenv
                                         ls -l $HOME/.cache || true
                                         ls -l $WORKSPACE/.cache || true
                                         uv build -v --sdist
