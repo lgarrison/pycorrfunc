@@ -72,7 +72,7 @@ pipeline {
                     steps {
                         // We're using docker as a way to install uv from a cache
                         sh '''
-                            printenv HOSTNAME HOME WORKSPACE
+                            hostname; printenv HOME WORKSPACE
                             id=$(docker create ghcr.io/astral-sh/uv:latest)
                             mkdir -p $HOME/.local/bin
                             docker cp $id:/uv $HOME/.local/bin/
@@ -105,7 +105,7 @@ pipeline {
                                     ENV_PYTHON = "${env.PYTHON}"
                                 }
                                 steps {
-                                    sh 'printenv HOSTNAME HOME WORKSPACE && cibuildwheel'
+                                    sh 'hostname; printenv HOME WORKSPACE && cibuildwheel'
                                 }
                             }
                             stage('sdist') {
@@ -122,7 +122,7 @@ pipeline {
                                 steps {
                                     // Build
                                     sh '''
-                                        printenv HOSTNAME HOME WORKSPACE
+                                        hostname; printenv HOME WORKSPACE
                                         ls -l $HOME/.cache || true
                                         ls -l $WORKSPACE/.cache || true
                                         uv build -v --sdist
