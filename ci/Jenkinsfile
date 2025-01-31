@@ -117,7 +117,12 @@ pipeline {
                                             }
                                         }
                                         steps {
-                                            sh 'uv build -v --sdist'
+                                            sh '''
+                                                printenv
+                                                ls -l $HOME/.cache
+                                                ls -l $WORKSPACE/.cache
+                                                uv build -v --sdist'
+                                            '''
                                         }
                                     }
 
