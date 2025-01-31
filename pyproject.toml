@@ -21,7 +21,8 @@ readme = "README.md"
 [tool.setuptools_scm]
 
 [dependency-groups]
-dev = ["pre-commit", "pytest"]
+dev = ["pre-commit", {include-group = "test"}]
+test = ["pytest"]
 
 [tool.meson-python]
 # This determines the wheel tag.
