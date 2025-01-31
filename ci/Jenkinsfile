@@ -89,7 +89,8 @@ pipeline {
                             axis {
                                 name 'PYTHON'
                                 // cp312 will build Limited API wheels for 3.12+
-                                values 'cp39', 'cp310', 'cp311', 'cp312', 'sdist'
+                                // values 'cp39', 'cp310', 'cp311', 'cp312', 'sdist'
+                                values 'cp312', 'sdist'
                             }
                         }
 
@@ -105,7 +106,14 @@ pipeline {
                                     ENV_PYTHON = "${env.PYTHON}"
                                 }
                                 steps {
-                                    sh 'hostname; printenv && cibuildwheel'
+                                    sh '''
+                                        ls -l /home/agent/workspace || true
+                                        ls -l /home/jenkins/workspace || true
+                                        ls -lR /home || true
+                                        hostname
+                                        printenv
+                                        cibuildwheel
+                                    '''
                                 }
                             }
                             stage('sdist') {
