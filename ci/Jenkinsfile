@@ -93,9 +93,7 @@ pipeline {
 
                         stages {
                             stage('Wheel') {
-                                when {
-                                    expression { env.PYTHON != 'sdist' }
-                                }
+                                when { not { environment name: 'PYTHON', value: 'sdist' } }
                                 environment {
                                     CIBW_BUILD = "${env.PYTHON}-*"
                                     CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
@@ -106,9 +104,7 @@ pipeline {
                                 }
                             }
                             stage('sdist') {
-                                when {
-                                    expression { env.PYTHON == 'sdist' }
-                                }
+                                when { environment name: 'PYTHON', value: 'sdist' }
                                 agent {
                                     dockerfile {
                                         filename 'ci/Dockerfile'
