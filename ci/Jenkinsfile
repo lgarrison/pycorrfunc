@@ -90,6 +90,10 @@ pipeline {
                                 values 'cp39', 'cp310', 'cp311', 'cp312', 'sdist'
                             }
                         }
+                        environment {
+                            HOME = "${env.WORKSPACE}"
+                            PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
+                        }
 
                         stages {
                             stage('Wheel') {
@@ -119,8 +123,8 @@ pipeline {
                                         steps {
                                             sh '''
                                                 printenv
-                                                ls -l $HOME/.cache
-                                                ls -l $WORKSPACE/.cache
+                                                ls -l $HOME/.cache || true
+                                                ls -l $WORKSPACE/.cache || true
                                                 uv build -v --sdist'
                                             '''
                                         }
