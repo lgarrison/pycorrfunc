@@ -33,7 +33,7 @@ pipeline {
                             sh '''
                                 uv venv
                                 . .venv/bin/activate
-                                uv export --only-group=dev | uv pip install --requirements=-
+                                uv export --only-group=dev | uv pip install -r -
                                 uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" .
                             '''
                         }
@@ -108,45 +108,32 @@ pipeline {
                                 when {
                                     expression { env.PYTHON == 'sdist' }
                                 }
-                                stages {
-                                    stage('Build') {
-                                        agent {
-                                            dockerfile {
-                                                filename 'ci/Dockerfile'
-                                                label 'linux && docker'
-                                            }
-                                        }
-                                        environment {
-                                            HOME = "${env.WORKSPACE}"
-                                            PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
-                                        }
-                                        steps {
-                                            sh '''
-                                                printenv
-                                                ls -l $HOME/.cache || true
-                                                ls -l $WORKSPACE/.cache || true
-                                                uv build -v --sdist
-                                            '''
-                                        }
+                                agent {
+                                    dockerfile {
+                                        filename 'ci/Dockerfile'
+                                        label 'linux && docker'
                                     }
+                                }
+                                environment {
+                                    HOME = "${env.WORKSPACE}"
+                                }
+                                steps {
+                                    // Build
+                                    sh '''
+                                        printenv
+                                        ls -l $HOME/.cache || true
+                                        ls -l $WORKSPACE/.cache || true
+                                        uv build -v --sdist
+                                    '''
 
-                                    stage('Test') {
-                                        agent {
-                                            dockerfile {
-                                                filename 'ci/Dockerfile'
-                                                label 'linux && docker'
-                                            }
-                                        }
-                                        steps {
-                                            sh '''
-                                                uv venv
-                                                . .venv/bin/activate
-                                                uv export --only-group=dev | uv pip install --requirements=-
-                                                uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" dist/*.tar.gz
-                                                pytest -vs
-                                            '''
-                                        }
-                                    }
+                                    // Test
+                                    sh '''
+                                        uv venv
+                                        . .venv/bin/activate
+                                        uv export --only-group=test | uv pip install -r -
+                                        uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" dist/*.tar.gz
+                                        pytest -vs
+                                    '''
                                 }
                             }
                         }
