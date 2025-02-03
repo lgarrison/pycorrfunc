@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+    tags:
   pull_request:
   schedule:
     # Run weekly, Friday at 7:15 EST.
@@ -34,6 +35,11 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: false
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
@@ -57,14 +63,16 @@ jobs:
           echo "CXX=clang++" >> $GITHUB_ENV
         fi
 
+    # Not using uv sync due to https://github.com/astral-sh/uv/issues/10996
+    # Waiting for uv pip install --group: https://github.com/astral-sh/uv/issues/8590
     - name: Install from source
       run: |
-        pip install -U pip
-        pip install -vU \
-          -Csetup-args="-Dwerror=true" \
-          -Ccompile-args="--verbose" \
-          .[test]
+        uv venv
+        . .venv/bin/activate
+        uv export --only-group=dev | uv pip install -r -
+        uv pip install -v -Csetup-args="-Dwerror=true" .
 
     - name: Run tests (no AVX512)
       run: |
+        . .venv/bin/activate
         pytest -v -k 'not avx512'

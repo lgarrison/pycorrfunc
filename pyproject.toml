@@ -1,23 +1,33 @@
 [build-system]
 build-backend = 'mesonpy'
-requires = ['meson-python']
+requires = ['meson-python', 'setuptools_scm >= 8']
 
 [project]
 name = 'pycorrfunc'
-version = '0.0.1'
-description = 'A pythonic rewrite of the software infrastructure surrounding Corrfunc'
+description = 'A pythonic rewrite of the Corrfunc software infrastructure'
 authors = [
   {name = 'Lehman Garrison', email = 'lgarrison@flatironinstitute.org'},
   {name = 'Peter McMaster', email = 'pjm2188@columbia.edu'},
 ]
 dependencies = [
   'numpy',
-  'astropy',
+  'astropy >= 5.3.3',
 ]
 license = { file = "LICENSE" }
+requires-python = ">= 3.9"
+dynamic = ["version"]
+readme = "README.md"
 
-[project.optional-dependencies]
+[tool.setuptools_scm]
+
+[dependency-groups]
+dev = ["pre-commit", {include-group = "test"}]
 test = ["pytest"]
+
+[tool.meson-python]
+# This determines the wheel tag.
+# It is automatically reverted to false if the build uses `python.allow_limited_api=false`.
+limited-api = true
 
 [tool.meson-python.args]
 compile = ["-v"]
@@ -28,3 +38,23 @@ quote-style = "single"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.cibuildwheel]
+archs = "auto64"
+build-frontend = "build[uv]"
+build-verbosity = 1
+manylinux-x86_64-image = "manylinux_2_28"
+skip = "pp* *-musllinux_*"
+test-command = "pytest -s {project}/tests"
+test-groups = "test"
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = [
+  "auditwheel repair -w {dest_dir} {wheel}",
+  # run abi3audit on wheels tagged with abi3
+  'case "$(basename {wheel})" in *"-abi3-"*) pip install -U abi3audit && abi3audit --strict --report {wheel};; esac',
+]
+
+[[tool.cibuildwheel.overrides]]
+select = "cp{312,313}-*"
+config-settings = "setup-args=-Dpython.allow_limited_api=true"

@@ -1,10 +1,10 @@
 pipeline {
     agent none
-    options {
-        timeout(time: 10, unit: 'MINUTES')
-    }
     stages {
         stage('Build and Test') {
+            options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
             matrix {
                 axes {
                     axis {
@@ -15,7 +15,7 @@ pipeline {
                 agent {
                     dockerfile {
                         filename 'ci/Dockerfile'
-                        label 'docker'
+                        label 'linux && docker'
                     }
                 }
                 environment {
@@ -23,19 +23,143 @@ pipeline {
                     CXX = "${env.COMPILER == 'gcc' ? 'g++' : 'clang++'}"
                     HOME = "$WORKSPACE"
                     OMP_NUM_THREADS = "$PARALLEL"
+                    UV_PYTHON_PREFERENCE = "only-system"
                 }
                 stages {
                     stage('Build') {
                         steps {
-                            sh 'python3 -m venv venv'
-                            sh '. venv/bin/activate && python -m pip install -U pip'
-                            sh '. venv/bin/activate && python -m pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" -Ccompile-args="--verbose" .[test]'
+                            // Not using uv sync due to https://github.com/astral-sh/uv/issues/10996
+                            // Waiting for uv pip install --group: https://github.com/astral-sh/uv/issues/8590
+                            sh '''
+                                uv venv
+                                . .venv/bin/activate
+                                uv export --only-group=dev | uv pip install -r -
+                                uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" .
+                            '''
                         }
                     }
                     stage('Test') {
                         steps {
-                            sh '. venv/bin/activate && python -m pytest -vs'
+                            sh '''
+                                . .venv/bin/activate
+                                pytest -vs
+                            '''
                         }
+                    }
+                }
+            }
+        }
+
+        stage('Build and Upload') {
+            when {
+                beforeAgent true
+                buildingTag()
+                tag pattern: "v\\d+.*", comparator: "REGEXP"
+            }
+            agent { label 'linux && docker' }
+            options {
+                timeout(time: 15, unit: 'MINUTES')
+            }
+            environment {
+                OMP_NUM_THREADS = "${env.PARALLEL}"
+                UV_PYTHON_PREFERENCE = "system"
+            }
+
+            stages {
+                stage('Setup') {
+                    environment {
+                        HOME = "${env.WORKSPACE}"
+                        PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
+                    }
+                    steps {
+                        // We're using docker as a way to install uv from a cache
+                        sh '''
+                            id=$(docker create ghcr.io/astral-sh/uv:latest)
+                            mkdir -p $HOME/.local/bin
+                            docker cp $id:/uv $HOME/.local/bin/
+                            docker rm $id
+                            uv tool install 'cibuildwheel >= 2.22'
+                            # work around race condition in cibuildwheel
+                            mkdir -p $WORKSPACE/wheelhouse
+                        '''
+                    }
+                }
+                stage('Build') {
+                    matrix {
+                        axes {
+                            axis {
+                                name 'PYTHON'
+                                // cp312 will build Limited API wheels for 3.12+
+                                values 'cp39', 'cp310', 'cp311', 'cp312', 'sdist'
+                            }
+                        }
+
+                        stages {
+                            stage('wheel') {
+                                when {
+                                    beforeAgent true
+                                    not { environment name: 'PYTHON', value: 'sdist' }
+                                }
+                                environment {
+                                    HOME = "${env.WORKSPACE}"
+                                    PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
+                                    CIBW_BUILD = "${env.PYTHON}-*"
+                                    CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
+                                }
+                                steps {
+                                    sh 'cibuildwheel'
+
+                                    dir('wheelhouse') {
+                                        stash includes: '*.whl', name: 'wheel'
+                                    }
+                                }
+                            }
+                            stage('sdist') {
+                                when {
+                                    beforeAgent true
+                                    environment name: 'PYTHON', value: 'sdist'
+                                }
+                                agent {
+                                    dockerfile {
+                                        filename 'ci/Dockerfile'
+                                        label 'linux && docker'
+                                    }
+                                }
+                                environment {
+                                    HOME = "${env.WORKSPACE}"
+                                }
+                                steps {
+                                    sh 'uv build -v --sdist'
+
+                                    sh '''
+                                        uv venv
+                                        . .venv/bin/activate
+                                        uv export --only-group=test | uv pip install -r -
+                                        uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" dist/*.tar.gz
+                                        pytest -vs
+                                    '''
+
+                                    dir('dist') {
+                                        stash includes: '*.tar.gz', name: 'sdist'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                stage('Upload') {
+                    environment {
+                        HOME = "${env.WORKSPACE}"
+                        PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
+                        UV_PUBLISH_TOKEN = credentials('pycorrfunc-testpypi')
+                    }
+                    steps {
+                        dir('dist') {
+                            unstash 'wheel'
+                            unstash 'sdist'
+                        }
+                        sh 'uv publish --publish-url="https://test.pypi.org/legacy/" dist/*'
                     }
                 }
             }

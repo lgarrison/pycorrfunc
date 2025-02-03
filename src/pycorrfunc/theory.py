@@ -3,12 +3,6 @@ import numpy as np
 
 from .isa import _lookup_isa
 
-# import Corrfunc
-# import pycorrfunc.compat as Corrfunc
-
-# from Corrfunc.theory.DD import DD
-# import pycorrfunc.compat.theory.DD import DD
-
 
 def DD(
     X1,

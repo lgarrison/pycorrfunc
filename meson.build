@@ -1,33 +1,51 @@
 project(
     'pycorrfunc',
-    'cpp',
-    'c',
-    version: '0.1.0',
-    license: 'BSD',
-    meson_version: '>= 1.1.0',
+    ['cpp', 'c'],
+    version: run_command('python',
+        '-m', 'setuptools_scm',
+        check: true,
+    ).stdout().strip(),
+    license: 'MIT',
+    meson_version: '>= 1.3.0',
     default_options: [
         'cpp_std=c++17',
         # 'b_sanitize=address,undefined',
         'warning_level=2',
         # 'werror=true',
         # 'openmp=disabled',
+        'python.allow_limited_api=false'
     ],
 )
 
 py = import('python').find_installation(pure: false)
-nanobind_dep = dependency('nanobind', static: true)
-openmp_dep = dependency('openmp', language: 'c', required: get_option('openmp'))
+extension_kwargs = {}
+
+if py.language_version().version_compare('>=3.12')
+  # 3.12 is the minimum version supported by nanobind.
+  # Note that this is opt-in, e.g. via
+  # `pip install -C=setup-args="-Dpython.allow_limited_api=true"`.
+  # The intention is that most builds will not use the limited API,
+  # but we may enable it for CI builds.
+  extension_kwargs += {'limited_api' : '3.12'}
+  
+  # workaround for https://github.com/mesonbuild/meson/issues/13824
+  if get_option('python.allow_limited_api')
+    add_global_arguments('-DPy_LIMITED_API=0x030c0000', language: ['c', 'cpp'])
+  endif
+endif
 
 if get_option('double_accum').enabled()
-  add_project_arguments('-DPYCORRFUNC_USE_DOUBLEACCUM', language: 'c')
-  add_project_arguments('-DPYCORRFUNC_USE_DOUBLEACCUM', language: 'cpp')
+  add_project_arguments('-DPYCORRFUNC_USE_DOUBLEACCUM', language: ['c', 'cpp'])
 endif
+
+nanobind_dep = dependency('nanobind', static: true)
+openmp_dep = dependency('openmp', language: 'c', required: get_option('openmp'))
 
 simd = import('unstable-simd')
 
 cc = meson.get_compiler('c')
 
-inc = include_directories('include', 'lib/theory/DD', 'lib/common', 'tests')
+inc = include_directories('include', 'lib/theory/DD', 'lib/common')
 
 extra_args = ['-funroll-loops']
 
@@ -55,7 +73,8 @@ simdinfo_double = simd.check(
 simdlibs_double = simdinfo_double[0]
 
 # AVX512 not natively supported by meson's SIMD module,
-# implement it manually
+# implement it manually.
+# Will likely be better supported by https://github.com/mesonbuild/meson/pull/11307
 avx512_supported = cc.has_argument('-mavx512f') and cc.has_argument('-mavx512vl')
 if avx512_supported
   avx512_sources = [
@@ -99,7 +118,7 @@ sources = [
   'lib/theory/DD/kernel_fallback.c',
 ]
 
-extension_kwargs = {
+extension_kwargs += {
   'sources' : sources,
   'install' : true,
   'subdir' : 'pycorrfunc',
