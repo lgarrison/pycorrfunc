@@ -74,7 +74,6 @@ pipeline {
                     steps {
                         // We're using docker as a way to install uv from a cache
                         sh '''
-                            hostname; printenv
                             id=$(docker create ghcr.io/astral-sh/uv:latest)
                             mkdir -p $HOME/.local/bin
                             docker cp $id:/uv $HOME/.local/bin/
