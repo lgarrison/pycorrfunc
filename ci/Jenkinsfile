@@ -51,11 +51,11 @@ pipeline {
         }
 
         stage('Build and Upload') {
-            // when {
-            //     beforeAgent true
-            //     buildingTag()
-            //     tag pattern: "v\\d+.*", comparator: "REGEXP"
-            // }
+            when {
+                beforeAgent true
+                buildingTag()
+                tag pattern: "v\\d+.*", comparator: "REGEXP"
+            }
             agent { label 'linux && docker' }
             options {
                 timeout(time: 15, unit: 'MINUTES')
@@ -160,10 +160,7 @@ pipeline {
                             unstash 'wheel'
                             unstash 'sdist'
                         }
-                        sh '''
-                            ls -lR
-                            uv publish --publish-url="https://test.pypi.org/legacy/" dist/*
-                        '''
+                        sh 'uv publish --publish-url="https://test.pypi.org/legacy/" dist/*'
                     }
                 }
             }
