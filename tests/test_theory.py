@@ -239,6 +239,6 @@ def test_one_dev(dtype):
 
     result = theory.DD(X, Y, Z, bin_edges, X2=X2, Y2=Y2, Z2=Z2, boxsize=box)
     expected_npairs = np.array([4, 0])
-    assert np.allclose(
-        result['npairs'], expected_npairs
-    ), f"Expected {expected_npairs}, but got {result['npairs']}"
+    assert np.allclose(result['npairs'], expected_npairs), (
+        f'Expected {expected_npairs}, but got {result["npairs"]}'
+    )
