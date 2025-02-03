@@ -151,6 +151,8 @@ pipeline {
 
                 stage('Upload') {
                     environment {
+                        HOME = "${env.WORKSPACE}"
+                        PATH = "${env.HOME}/.local/bin${env.PATH ? ':' + env.PATH : ''}"
                         UV_PUBLISH_TOKEN = credentials('pycorrfunc-testpypi')
                     }
                     steps {
