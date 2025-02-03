@@ -91,8 +91,7 @@ pipeline {
                             axis {
                                 name 'PYTHON'
                                 // cp312 will build Limited API wheels for 3.12+
-                                // values 'cp39', 'cp310', 'cp311', 'cp312', 'sdist'
-                                values 'cp312', 'sdist'
+                                values 'cp39', 'cp310', 'cp311', 'cp312', 'sdist'
                             }
                         }
 
@@ -109,13 +108,8 @@ pipeline {
                                     CIBW_ENVIRONMENT_PASS_LINUX = "OMP_NUM_THREADS"
                                 }
                                 steps {
-                                    sh '''
-                                        ls -l /home/agent/workspace || true
-                                        ls -l /home/jenkins/workspace || true
-                                        hostname
-                                        printenv
-                                        cibuildwheel
-                                    '''
+                                    sh 'cibuildwheel'
+                                    stash includes: 'wheelhouse/*.whl', name: 'wheel'
                                 }
                             }
                             stage('sdist') {
@@ -133,15 +127,8 @@ pipeline {
                                     HOME = "${env.WORKSPACE}"
                                 }
                                 steps {
-                                    // Build
-                                    sh '''
-                                        hostname; printenv
-                                        ls -l $HOME/.cache || true
-                                        ls -l $WORKSPACE/.cache || true
-                                        uv build -v --sdist
-                                    '''
+                                    sh 'uv build -v --sdist'
 
-                                    // Test
                                     sh '''
                                         uv venv
                                         . .venv/bin/activate
@@ -149,6 +136,8 @@ pipeline {
                                         uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" dist/*.tar.gz
                                         pytest -vs
                                     '''
+
+                                    stash includes: 'dist/*.tar.gz', name: 'sdist'
                                 }
                             }
                         }
@@ -160,9 +149,13 @@ pipeline {
                         UV_PUBLISH_TOKEN = credentials('pycorrfunc-testpypi')
                     }
                     steps {
+                        dir('dist') {
+                            unstash 'wheel'
+                            unstash 'sdist'
+                        }
                         sh '''
                             ls -lR
-                            uv publish --publish-url="https://test.pypi.org/legacy/" wheelhouse/*.whl dist/*.tar.gz'
+                            uv publish --publish-url="https://test.pypi.org/legacy/" dist/*
                         '''
                     }
                 }
