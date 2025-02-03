@@ -109,7 +109,10 @@ pipeline {
                                 }
                                 steps {
                                     sh 'cibuildwheel'
-                                    stash includes: 'wheelhouse/*.whl', name: 'wheel'
+
+                                    dir('wheelhouse') {
+                                        stash includes: '*.whl', name: 'wheel'
+                                    }
                                 }
                             }
                             stage('sdist') {
@@ -137,7 +140,9 @@ pipeline {
                                         pytest -vs
                                     '''
 
-                                    stash includes: 'dist/*.tar.gz', name: 'sdist'
+                                    dir('dist') {
+                                        stash includes: '*.tar.gz', name: 'sdist'
+                                    }
                                 }
                             }
                         }
