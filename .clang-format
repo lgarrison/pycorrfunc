@@ -22,7 +22,6 @@ ContinuationIndentWidth: 3
 IndentCaseLabels: true
 IndentExternBlock: Indent
 IndentWidth: 4
-Language: Cpp
 NamespaceIndentation : All
 SpaceAfterCStyleCast: true
 SpacesBeforeTrailingComments: 2
