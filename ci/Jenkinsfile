@@ -15,7 +15,7 @@ pipeline {
                 agent {
                     dockerfile {
                         filename 'ci/Dockerfile'
-                        label 'linux && docker'
+                        label 'linux && docker && !amd'
                     }
                 }
                 environment {
