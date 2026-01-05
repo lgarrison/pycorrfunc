@@ -38,7 +38,7 @@ if get_option('double_accum').enabled()
   add_project_arguments('-DPYCORRFUNC_USE_DOUBLEACCUM', language: ['c', 'cpp'])
 endif
 
-nanobind_dep = dependency('nanobind', static: true)
+nanobind_dep = dependency('nanobind', static: true, include_type: 'system')
 openmp_dep = dependency('openmp', language: 'c', required: get_option('openmp'))
 
 simd = import('unstable-simd')
