@@ -34,7 +34,7 @@ pipeline {
                                 uv venv
                                 . .venv/bin/activate
                                 uv export --only-group=dev | uv pip install -r -
-                                uv pip install -v -Csetup-args="-Dwerror=true" -Ccompile-args="-j$PARALLEL" .
+                                uv pip install -v -Csetup-args="-D:werror=true" -Ccompile-args="-j$PARALLEL" .
                             '''
                         }
                     }
