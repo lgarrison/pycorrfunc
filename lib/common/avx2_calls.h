@@ -160,10 +160,10 @@
 #endif
 
 // Max
-#define AVX2_MAX_FLOATS(X, Y)             _mm256_max_pd(X, Y)
+#define AVX2_MAX_FLOATS(X, Y) _mm256_max_pd(X, Y)
 
 // Absolute value
-#define AVX2_ABS_FLOAT(X)                 _mm256_max_pd(_mm256_sub_pd(_mm256_setzero_pd(), X), X)
+#define AVX2_ABS_FLOAT(X)     _mm256_max_pd(_mm256_sub_pd(_mm256_setzero_pd(), X), X)
 
 // Casting (does not actual convert between types)
 #define AVX2_CAST_FLOAT_TO_INT(X)         _mm256_castpd_si256(X)
