@@ -18,17 +18,13 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: "3.9"
-            compiler: gcc
-          - python-version: "3.10"
-            compiler: gcc
-          - python-version: "3.11"
-            compiler: gcc
           - python-version: "3.12"
             compiler: gcc
           - python-version: "3.13"
             compiler: gcc
-          - python-version: "3.12"
+          - python-version: "3.14"
+            compiler: gcc
+          - python-version: "3.13"
             compiler: clang
 
     steps:
