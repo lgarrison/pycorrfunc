@@ -2,7 +2,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-import pycorrfunc.theory as theory
+from pycorrfunc import theory
 
 DEFAULT_BOXSIZE = 123.0
 

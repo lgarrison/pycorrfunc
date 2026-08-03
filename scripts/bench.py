@@ -6,11 +6,12 @@ Run "python bench.py --help" for more information.
 """
 
 import os
+import timeit
 
 import click
-import timeit
 import numpy as np
 from Corrfunc.theory.DD import DD as corrfunc_DD
+
 from pycorrfunc.theory import DD as pycorrfunc_DD
 
 NTHREAD = len(os.sched_getaffinity(0))
