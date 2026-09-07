@@ -132,6 +132,7 @@ The `lib/cpp_utils.cpp` file centralizes C++ logic (OpenMP pragmas, error handli
 The `theory` module accepts an `isa` parameter. Test dispatch manually:
 ```python
 import pycorrfunc.theory as theory
+
 result = theory.some_function(..., isa='avx')  # Force specific ISA
 ```
 
